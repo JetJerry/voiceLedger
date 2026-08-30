@@ -11,3 +11,4 @@ python-multipart>=0.0.9
 jinja2>=3.1.4
 pytest>=8.3.0
 pytest-asyncio>=0.24.0
+nest-asyncio>=1.6.0

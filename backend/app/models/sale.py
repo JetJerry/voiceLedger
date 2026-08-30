@@ -11,7 +11,7 @@ class Sale(Base):
     id = Column(String(50), primary_key=True, default=lambda: f"sale_{uuid.uuid4().hex[:10]}")
     merchant_id = Column(Integer, ForeignKey("merchants.id"), nullable=False, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True, index=True)
-    customer_name = Column(String(255), nullable=False, index=True)
+    customer_name = Column(String(255), nullable=True, index=True)
     
     total_amount = Column(Float, nullable=False, default=0.0)
     received_amount = Column(Float, nullable=False, default=0.0)

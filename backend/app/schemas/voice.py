@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 
 class VoiceItemExtracted(BaseModel):
-    product_name: str = Field(..., description="Recognized item name from speech, e.g. burger, pizza")
+    product_name: str = Field(..., description="Recognized item name from speech, e.g. coffee, shirt, burger, pen")
     quantity: int = Field(default=1, description="Quantity ordered")
     unit_price: Optional[float] = Field(default=None, description="Spoken unit price if explicitly stated")
 
@@ -11,10 +11,11 @@ class VoiceItemExtracted(BaseModel):
 class VoiceExtractionResult(BaseModel):
     intent: str = Field(
         default="record_sale",
-        description="record_sale, query_pending, query_status, query_daily, trigger_recovery, general_qa"
+        description="record_sale, check_payment_status, query_pending, query_daily, general_qa"
     )
-    customer_name: Optional[str] = Field(default=None, description="Customer name mentioned in speech")
-    customer_phone: Optional[str] = Field(default=None, description="Customer phone if mentioned")
+    product_name: Optional[str] = Field(default=None, description="Product filter for payment status queries")
+    sale_id: Optional[str] = Field(default=None, description="Sale ID if mentioned")
+    customer_name: Optional[str] = Field(default=None, description="Optional customer reference if mentioned")
     items: List[VoiceItemExtracted] = Field(default_factory=list, description="Extracted sale items")
     payment_status: Optional[str] = Field(default="pending", description="pending, paid, partial")
     raw_text: str = Field(..., description="Original raw transcript")
@@ -23,10 +24,13 @@ class VoiceExtractionResult(BaseModel):
 
 class VoiceProcessRequest(BaseModel):
     text: str = Field(..., description="Transcribed merchant speech or typed text query")
+    speak_response: bool = Field(default=True, description="Whether to generate TTS neural voice audio")
+    voice_lang: str = Field(default="hi", description="hi (Hindi) or en (English)")
 
 
 class VoiceProcessResponse(BaseModel):
     extraction: VoiceExtractionResult
     agent_reply: str
+    audio_base64: Optional[str] = Field(default=None, description="Base64 Data URL MP3 for neural audio playback")
     sale: Optional[dict] = None
     action_taken: Optional[str] = None

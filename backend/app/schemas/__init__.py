@@ -11,7 +11,6 @@ from backend.app.schemas.sale import (
     SaleResponse,
     ProductCreate,
     ProductResponse,
-    CustomerResponse,
 )
 from backend.app.schemas.payment import (
     PaymentLinkCreate,
@@ -37,7 +36,6 @@ __all__ = [
     "SaleResponse",
     "ProductCreate",
     "ProductResponse",
-    "CustomerResponse",
     "PaymentLinkCreate",
     "PaymentLinkResponse",
     "PaymentResponse",

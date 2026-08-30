@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"  # gemini, openai, or mock
     LLM_MODEL: str = "gemini-2.5-flash"
     
-    # Server configuration
-    HOST: str = "0.0.0.0"
+    # Server configuration (127.0.0.1 for local browser compatibility on Windows)
+    HOST: str = "127.0.0.1"
     PORT: int = 8000
     CORS_ORIGINS: List[str] = ["*"]
     

@@ -26,7 +26,7 @@
       </div>
       <div>
         <h1 class="logo-title">VoiceLedger</h1>
-        <p class="logo-subtitle">AI Revenue Recovery & Payment Agent for Merchants</p>
+        <p class="logo-subtitle">Voice-First Product Sales & Payment Arrival Verification</p>
       </div>
     </div>
     
@@ -37,7 +37,7 @@
       </div>
       <div class="status-pill ai-pill">
         <span class="sparkle">✨</span>
-        <span id="ai-engine-label">Gemini / AI Ready</span>
+        <span id="ai-engine-label">Voice Agent Ready</span>
       </div>
     </div>
   </header>
@@ -49,8 +49,8 @@
         <div class="voice-title-wrap">
           <span class="mic-wave-icon">🎙️</span>
           <div>
-            <h2>Speak or Type Merchant Sale</h2>
-            <p>Try: <em>"Rahul ko 2 burger diye, 100 each"</em> or <em>"Aaj kitna paisa pending hai?"</em></p>
+            <h2>Speak or Check Payment Arrival</h2>
+            <p>Speak sold products or ask: <em>"Payment aaya kya?"</em></p>
           </div>
         </div>
         <div class="mic-controls">
@@ -67,7 +67,7 @@
 
       <div class="voice-input-row">
         <div class="input-wrapper">
-          <input type="text" id="voice-text-input" placeholder="Type or speak a sale/query in English or Hinglish..." autocomplete="off">
+          <input type="text" id="voice-text-input" placeholder="Speak a sale (e.g. 2 coffee 60 rupaye) or ask: Payment aaya kya?..." autocomplete="off">
           <button id="send-voice-btn" class="btn btn-primary send-btn">
             <span>Process</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -80,12 +80,11 @@
 
       <!-- Quick Action Sample Prompts -->
       <div class="prompt-chips">
-        <span class="chips-label">Quick Prompts:</span>
-        <button class="chip" data-prompt="Rahul ko 2 burger diye, 100 each">🍔 Rahul 2 Burger (₹200)</button>
-        <button class="chip" data-prompt="Amit ko 1 pizza aur 1 coke diya">🍕 Amit Pizza + Coke (₹340)</button>
-        <button class="chip" data-prompt="Neha ko 2 paneer roll diye">🌯 Neha 2 Rolls (₹240)</button>
-        <button class="chip" data-prompt="Aaj kitna paisa pending hai?">❓ Total Pending Amount</button>
-        <button class="chip" data-prompt="Amit ko recovery reminder bhej do">💬 Recover Pending Payment</button>
+        <span class="chips-label">Quick Actions:</span>
+        <button class="chip chip-action" data-prompt="Payment aaya kya?">🔍 Payment aaya kya?</button>
+        <button class="chip" data-prompt="2 coffee aur 1 sandwich 120 rupaye">☕ 2 Coffee + Sandwich (₹120)</button>
+        <button class="chip" data-prompt="3 notebook 150 rs">📚 3 Notebook (₹150)</button>
+        <button class="chip" data-prompt="Kitna pending hai?">❓ Total Pending</button>
       </div>
 
       <!-- Live Agent Response Banner -->
@@ -93,7 +92,7 @@
         <div class="agent-avatar">🤖</div>
         <div class="agent-msg-content">
           <div class="agent-name">VoiceLedger Agent</div>
-          <div id="agent-reply-text" class="agent-text">Understanding...</div>
+          <div id="agent-reply-text" class="agent-text">Checking status...</div>
           <div id="agent-action-tag" class="agent-tag"></div>
         </div>
       </div>
@@ -128,7 +127,7 @@
       <div class="metric-card glass-panel card-counts">
         <div class="metric-icon">📊</div>
         <div class="metric-details">
-          <div class="metric-label">Transactions Overview</div>
+          <div class="metric-label">Transactions Status</div>
           <div class="badge-row">
             <span class="status-badge badge-paid"><b id="count-paid">0</b> Paid</span>
             <span class="status-badge badge-partial"><b id="count-partial">0</b> Partial</span>
@@ -138,98 +137,67 @@
       </div>
     </section>
 
-    <!-- Two-Column Main Content -->
-    <div class="dashboard-split-layout">
-      <!-- Left Column: Transactions List -->
-      <section class="transactions-section glass-panel">
-        <div class="section-header">
-          <div class="section-title-wrap">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <h3>Live Receivables & Reconciliation</h3>
-          </div>
-          <button id="refresh-btn" class="btn btn-secondary btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 4v6h-6"></path>
-              <path d="M1 20v-6h6"></path>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
-            <span>Refresh</span>
-          </button>
+    <!-- Transactions List -->
+    <section class="transactions-section glass-panel">
+      <div class="section-header">
+        <div class="section-title-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <h3>Sold Products & Payment Status</h3>
         </div>
+        <button id="refresh-btn" class="btn btn-secondary btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"></path>
+            <path d="M1 20v-6h6"></path>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
 
-        <div class="table-wrapper">
-          <table class="data-table" id="sales-table">
-            <thead>
-              <tr>
-                <th>Customer & Items</th>
-                <th>Expected</th>
-                <th>Received</th>
-                <th>Outstanding</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="sales-tbody">
-              <tr>
-                <td colspan="6" class="empty-state">Loading sales...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Right Column: Priority Recovery Queue -->
-      <aside class="recovery-section glass-panel">
-        <div class="section-header">
-          <div class="section-title-wrap">
-            <span class="fire-icon">🔥</span>
-            <h3>AI Revenue Recovery Queue</h3>
-          </div>
-        </div>
-        <p class="recovery-intro">Smart prioritization based on outstanding amount and days overdue.</p>
-
-        <div id="recovery-queue-list" class="recovery-queue-list">
-          <div class="empty-recovery">No overdue pending payments right now.</div>
-        </div>
-
-        <!-- Quick Catalog Preview -->
-        <div class="catalog-card-wrap">
-          <div class="section-header" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
-            <div class="section-title-wrap">
-              <span>📋</span>
-              <h4 style="font-size: 1rem; color: var(--text-primary);">Merchant Menu Catalog</h4>
-            </div>
-          </div>
-          <div id="catalog-chips-wrap" class="catalog-chips-wrap">
-            <!-- Dynamically populated -->
-          </div>
-        </div>
-      </aside>
-    </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="sales-table">
+          <thead>
+            <tr>
+              <th>Order Items Sold</th>
+              <th>Expected</th>
+              <th>Received</th>
+              <th>Outstanding</th>
+              <th>Payment Arrival Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sales-tbody">
+            <tr>
+              <td colspan="6" class="empty-state">Loading sales...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
-  <!-- Payment Simulator Modal (For Demo / Hackathon testing) -->
+  <!-- Payment Simulator Modal (For Demo testing) -->
   <div id="simulate-modal" class="modal-overlay hidden">
     <div class="modal-card glass-panel">
       <div class="modal-header">
-        <h3>⚡ Razorpay Payment Simulator</h3>
+        <h3>⚡ Simulate Customer Payment</h3>
         <button id="close-modal-btn" class="close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="modal-subtitle">Simulate real customer payments or webhooks to test automatic reconciliation.</p>
+        <p class="modal-subtitle">Simulate payment arrival to verify automatic reconciliation and voice status checks.</p>
         <div class="form-group">
           <label>Sale ID</label>
           <input type="text" id="sim-sale-id" readonly>
         </div>
         <div class="form-group">
-          <label>Customer Name</label>
-          <input type="text" id="sim-customer-name" readonly>
+          <label>Sold Products</label>
+          <input type="text" id="sim-items" readonly>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -253,7 +221,7 @@
   </div>
 
   <footer class="app-footer">
-    <p>VoiceLedger — Built with FastAPI, Razorpay Test Mode & Google Gemini AI</p>
+    <p>VoiceLedger — Real-Time Payment Arrival Verification with Razorpay</p>
   </footer>
 
   <script src="/static/app.js"></script>

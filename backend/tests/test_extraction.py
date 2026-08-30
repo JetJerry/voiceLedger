@@ -1,32 +1,31 @@
 from backend.app.services.llm_service import llm_service
 
 
-def test_hinglish_sale_extraction():
-    speech = "Rahul ko do burger diye, 100 each."
-    result = llm_service.extract_transaction(speech, catalog_items=["burger", "pizza", "coke"])
+def test_dynamic_product_sale_extraction():
+    speech = "do coffee aur ek sandwich 120 rupaye"
+    result = llm_service.extract_transaction(speech, catalog_items=["coffee", "sandwich", "tea"])
     
     assert result.intent == "record_sale"
-    assert result.customer_name == "Rahul"
-    assert len(result.items) >= 1
-    assert result.items[0].product_name == "burger"
-    assert result.items[0].quantity == 2
+    assert len(result.items) >= 2
+    coffee = next((it for it in result.items if "coffee" in it.product_name), None)
+    assert coffee is not None
+    assert coffee.quantity == 2
 
 
-def test_hinglish_pending_query():
-    query = "Aaj kitna paisa pending hai?"
+def test_voice_payment_arrival_check():
+    query = "Payment aaya kya?"
     result = llm_service.extract_transaction(query)
-    assert result.intent in ["query_pending", "query_daily"]
+    assert result.intent == "check_payment_status"
 
 
-def test_customer_status_query():
-    query = "Rahul ka payment aaya kya?"
+def test_product_specific_payment_arrival_check():
+    query = "Coffee ka payment aaya kya?"
+    result = llm_service.extract_transaction(query, catalog_items=["coffee", "tea"])
+    assert result.intent == "check_payment_status"
+    assert result.product_name == "coffee"
+
+
+def test_pending_balance_query():
+    query = "Kitna paisa pending hai?"
     result = llm_service.extract_transaction(query)
-    assert result.intent == "query_status"
-    assert result.customer_name == "Rahul"
-
-
-def test_trigger_recovery_query():
-    query = "Amit ko recovery link bhej do"
-    result = llm_service.extract_transaction(query)
-    assert result.intent == "trigger_recovery"
-    assert result.customer_name == "Amit"
+    assert result.intent == "query_pending"

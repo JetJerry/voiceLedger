@@ -23,17 +23,15 @@ const countPaid = document.getElementById('count-paid');
 const countPartial = document.getElementById('count-partial');
 const countPending = document.getElementById('count-pending');
 
-// Table & Lists
+// Table
 const salesTbody = document.getElementById('sales-tbody');
-const recoveryQueueList = document.getElementById('recovery-queue-list');
-const catalogChipsWrap = document.getElementById('catalog-chips-wrap');
 const refreshBtn = document.getElementById('refresh-btn');
 
 // Modal Elements
 const simulateModal = document.getElementById('simulate-modal');
 const closeModalBtn = document.getElementById('close-modal-btn');
 const simSaleId = document.getElementById('sim-sale-id');
-const simCustomerName = document.getElementById('sim-customer-name');
+const simItems = document.getElementById('sim-items');
 const simExpectedAmt = document.getElementById('sim-expected-amt');
 const simPaymentAmt = document.getElementById('sim-payment-amt');
 const simFullBtn = document.getElementById('sim-full-btn');
@@ -47,12 +45,12 @@ function initSpeechRecognition() {
     recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.lang = 'hi-IN'; // Supports Hinglish and Hindi
+    recognition.lang = 'hi-IN';
 
     recognition.onstart = () => {
       isRecording = true;
       micBtn.classList.add('recording');
-      voiceTextInput.placeholder = 'Listening... Speak your sale now (e.g. Rahul ko do burger diye)';
+      voiceTextInput.placeholder = 'Listening... Speak your sale or ask: Payment aaya kya?';
     };
 
     recognition.onresult = (event) => {
@@ -70,7 +68,7 @@ function initSpeechRecognition() {
       stopRecording();
     };
   } else {
-    console.info('Web Speech API not supported in this browser. Falling back to text input.');
+    console.info('Web Speech API not supported. You can type commands directly in the input box.');
   }
 }
 
@@ -89,7 +87,7 @@ function startRecording() {
 function stopRecording() {
   isRecording = false;
   micBtn.classList.remove('recording');
-  voiceTextInput.placeholder = 'Type or speak a sale/query in English or Hinglish...';
+  voiceTextInput.placeholder = 'Speak a sale (e.g. 2 coffee 60 rupaye) or ask: Payment aaya kya?...';
 }
 
 // Process voice / text command
@@ -98,8 +96,8 @@ async function handleProcessVoice(textOverride = null) {
   if (!text) return;
 
   agentResponseBox.classList.remove('hidden');
-  agentReplyText.innerText = 'Processing command...';
-  agentActionTag.innerText = 'Analyzing Intent';
+  agentReplyText.innerText = 'Checking with VoiceLedger Agent...';
+  agentActionTag.innerText = 'Processing';
   agentActionTag.style.display = 'inline-block';
 
   try {
@@ -115,8 +113,11 @@ async function handleProcessVoice(textOverride = null) {
     agentReplyText.innerText = data.agent_reply;
     agentActionTag.innerText = data.action_taken || 'Completed';
 
-    // Optional TTS audio speak
-    if ('speechSynthesis' in window && data.agent_reply) {
+    // Neural TTS Audio Playback (Hindi / English Neural Voice)
+    if (data.audio_base64) {
+      const audio = new Audio(data.audio_base64);
+      audio.play().catch(e => console.log('Audio autoplay prevented or error:', e));
+    } else if ('speechSynthesis' in window && data.agent_reply) {
       const utterance = new SpeechSynthesisUtterance(data.agent_reply);
       utterance.lang = 'hi-IN';
       utterance.rate = 1.0;
@@ -150,9 +151,6 @@ async function loadDashboard() {
 
     // Render Sales Table
     renderSalesTable(data.recent_sales);
-
-    // Render Recovery Queue
-    renderRecoveryQueue(data.recovery_priority_items);
   } catch (e) {
     console.error('Failed to load dashboard data:', e);
   }
@@ -168,30 +166,36 @@ function renderSalesTable(sales) {
   salesTbody.innerHTML = sales.map(s => {
     const itemsSummary = (s.items && s.items.length > 0)
       ? s.items.map(i => `${i.quantity}x ${i.product_name}`).join(', ')
-      : (s.raw_voice_transcript || 'General order');
+      : (s.raw_voice_transcript || 'Order items');
 
     let badgeClass = 'badge-pending';
-    if (s.status === 'PAID') badgeClass = 'badge-paid';
-    else if (s.status === 'PARTIAL') badgeClass = 'badge-partial';
+    let statusText = 'PENDING ⏳';
+    if (s.status === 'PAID') {
+      badgeClass = 'badge-paid';
+      statusText = 'PAID ✅';
+    } else if (s.status === 'PARTIAL') {
+      badgeClass = 'badge-partial';
+      statusText = 'PARTIAL ⚠️';
+    }
 
     const rzpLinkBtn = s.razorpay_payment_link_url
       ? `<a href="${s.razorpay_payment_link_url}" target="_blank" class="btn btn-secondary btn-sm" title="Open Razorpay Checkout">💳 Pay Link</a>`
       : '';
 
     const simBtn = s.status !== 'PAID'
-      ? `<button class="btn btn-primary btn-sm sim-pay-btn" data-sale-id="${s.id}" data-customer="${s.customer_name}" data-expected="${s.total_amount}" data-outstanding="${s.outstanding_amount}">⚡ Simulate Pay</button>`
+      ? `<button class="btn btn-primary btn-sm sim-pay-btn" data-sale-id="${s.id}" data-items="${itemsSummary}" data-expected="${s.total_amount}" data-outstanding="${s.outstanding_amount}">⚡ Pay Simulate</button>`
       : '';
 
     return `
       <tr>
         <td>
-          <div class="customer-cell">${s.customer_name}</div>
-          <div class="items-subtext">${itemsSummary}</div>
+          <div class="customer-cell">${itemsSummary}</div>
+          <div class="items-subtext">ID: ${s.id}</div>
         </td>
         <td><b>₹${s.total_amount.toFixed(2)}</b></td>
         <td class="text-success">₹${s.received_amount.toFixed(2)}</td>
         <td class="${s.outstanding_amount > 0 ? 'text-danger' : ''}">₹${s.outstanding_amount.toFixed(2)}</td>
-        <td><span class="status-badge ${badgeClass}">${s.status}</span></td>
+        <td><span class="status-badge ${badgeClass}">${statusText}</span></td>
         <td>
           <div class="action-btn-group">
             ${rzpLinkBtn}
@@ -207,7 +211,7 @@ function renderSalesTable(sales) {
     btn.addEventListener('click', () => {
       openSimulateModal({
         id: btn.dataset.saleId,
-        customerName: btn.dataset.customer,
+        items: btn.dataset.items,
         expected: parseFloat(btn.dataset.expected),
         outstanding: parseFloat(btn.dataset.outstanding)
       });
@@ -215,77 +219,11 @@ function renderSalesTable(sales) {
   });
 }
 
-// Render Recovery Queue
-function renderRecoveryQueue(items) {
-  if (!items || items.length === 0) {
-    recoveryQueueList.innerHTML = `<div class="empty-recovery">🎉 No outstanding receivables pending!</div>`;
-    return;
-  }
-
-  recoveryQueueList.innerHTML = items.map(item => {
-    const priorityClass = item.priority_level === 'HIGH' ? 'priority-high' : (item.priority_level === 'MEDIUM' ? 'priority-medium' : 'priority-low');
-    
-    return `
-      <div class="recovery-item-card">
-        <div class="recovery-item-top">
-          <span class="recovery-name">${item.customer_name}</span>
-          <span class="priority-tag ${priorityClass}">${item.priority_level} Priority</span>
-        </div>
-        <div class="recovery-item-mid">
-          <span>Due: <b class="text-danger">₹${item.outstanding_amount.toFixed(2)}</b></span>
-          <span class="recovery-due">${item.days_overdue > 0 ? `${item.days_overdue} days overdue` : 'Due today'}</span>
-        </div>
-        <button class="recovery-btn" data-sale-id="${item.sale_id}" data-customer="${item.customer_name}">
-          💬 Resend WhatsApp Reminder
-        </button>
-      </div>
-    `;
-  }).join('');
-
-  // Attach recovery click listeners
-  document.querySelectorAll('.recovery-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const saleId = btn.dataset.saleId;
-      try {
-        btn.innerText = 'Sending reminder...';
-        const res = await fetch(`${API_BASE}/recovery/trigger`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sale_id: saleId, action_type: 'whatsapp_reminder' })
-        });
-        const result = await res.json();
-        if (result.whatsapp_url) {
-          window.open(result.whatsapp_url, '_blank');
-        }
-        btn.innerText = '✅ Reminder Sent';
-        setTimeout(() => loadDashboard(), 1500);
-      } catch (err) {
-        alert('Failed to trigger recovery reminder');
-        btn.innerText = '💬 Resend WhatsApp Reminder';
-      }
-    });
-  });
-}
-
-// Load Catalog Chips
-async function loadCatalog() {
-  try {
-    const res = await fetch(`${API_BASE}/sales/catalog/products`);
-    if (!res.ok) return;
-    const products = await res.json();
-    catalogChipsWrap.innerHTML = products.map(p => `
-      <span class="catalog-chip">${p.name}: <b>₹${p.price.toFixed(0)}</b></span>
-    `).join('');
-  } catch (e) {
-    console.error('Failed to load catalog:', e);
-  }
-}
-
 // Modal Handlers
 function openSimulateModal(sale) {
   currentSimSale = sale;
   simSaleId.value = sale.id;
-  simCustomerName.value = sale.customerName;
+  simItems.value = sale.items;
   simExpectedAmt.value = `₹${sale.expected.toFixed(2)}`;
   simPaymentAmt.value = sale.outstanding.toFixed(2);
   simulateModal.classList.remove('hidden');
@@ -300,7 +238,6 @@ function closeSimulateModal() {
 document.addEventListener('DOMContentLoaded', () => {
   initSpeechRecognition();
   loadDashboard();
-  loadCatalog();
 
   // Polling every 5 seconds for live webhook updates
   setInterval(loadDashboard, 5000);

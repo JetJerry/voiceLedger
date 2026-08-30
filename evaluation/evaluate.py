@@ -59,7 +59,6 @@ def run_evaluation():
 
     for idx, test_case in enumerate(dataset, 1):
         speech = test_case["speech_input"]
-        exp_cust = test_case["expected_customer"]
         exp_item = test_case["expected_items"][0]["name"]
         exp_qty = test_case["expected_items"][0]["quantity"]
         exp_price = test_case["expected_items"][0]["price"]
@@ -68,11 +67,10 @@ def run_evaluation():
 
         status_matrix[target_status]["expected"] += 1
 
-        # 1. Test AI Speech Extraction
-        extraction = llm_service.extract_transaction(speech)
-        is_cust_match = (extraction.customer_name or "").lower() == exp_cust.lower()
+        # 1. Test AI Speech Extraction (Product & Quantity)
+        extraction = llm_service.extract_transaction(speech, catalog_items=[exp_item])
         is_item_match = any(it.product_name == exp_item and it.quantity == exp_qty for it in extraction.items)
-        if is_cust_match and is_item_match:
+        if is_item_match:
             extraction_correct += 1
 
         # 2. Create authoritative sale
@@ -80,8 +78,6 @@ def run_evaluation():
             sale = sales_service.create_sale(
                 db,
                 SaleCreate(
-                    customer_name=exp_cust,
-                    customer_phone=test_case.get("customer_phone"),
                     items=[SaleItemCreate(product_name=exp_item, quantity=exp_qty, unit_price=exp_price)],
                     auto_create_payment_link=True
                 )

@@ -1,35 +1,86 @@
 from datetime import datetime, timezone, date
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from backend.app.models import Merchant, Customer, Product, Sale, Payment
-from backend.app.schemas.voice import VoiceProcessRequest, VoiceProcessResponse, VoiceItemExtracted
+from backend.app.models import Product, Sale, Payment
+from backend.app.schemas.voice import VoiceProcessRequest, VoiceProcessResponse
 from backend.app.schemas.sale import SaleCreate, SaleItemCreate
 from backend.app.services.llm_service import llm_service
 from backend.app.services.sales_service import sales_service
 from backend.app.services.recovery_service import recovery_service
+from backend.app.services.tts_service import tts_service
 
 
 class MerchantAgent:
     def process_merchant_command(self, db: Session, request: VoiceProcessRequest) -> VoiceProcessResponse:
         """
         Guarded Agent Orchestrator:
-        1. Fetches current catalog names for extraction grounding.
-        2. Uses LLMService to parse spoken/typed command.
-        3. Routes to deterministic backend tools.
-        4. Returns verified state and natural Hinglish explanation.
+        - Dynamically passes database catalog items to LLMService.
+        - Handles sale recording and payment arrival verification via voice.
+        - Generates natural Hindi/English neural TTS speech audio.
         """
-        # Get catalog items for context
+        # Fetch current catalog product names from database dynamically
         products = db.query(Product).all()
         catalog_names = [p.name for p in products]
 
         # 1. AI Extraction
         extraction = llm_service.extract_transaction(request.text, catalog_items=catalog_names)
         intent = extraction.intent
-        
-        # 2. Guarded Tool Dispatch
-        if intent == "record_sale" and extraction.items:
-            # Tool: Create Sale & Payment Link
+
+        # 2. Handle Intent: Check whether payment of the sold product has arrived or not
+        if intent == "check_payment_status":
+            target_sale = None
+            if extraction.product_name:
+                # Find recent sale matching the spoken product name
+                sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(20).all()
+                for s in sales:
+                    if any(extraction.product_name in it.product_name.lower() for it in s.items):
+                        target_sale = s
+                        break
+
+            # Fallback to the latest recorded sale
+            if not target_sale:
+                target_sale = db.query(Sale).order_by(Sale.created_at.desc()).first()
+
+            if target_sale:
+                items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in target_sale.items]) or "Sold item"
+                if target_sale.status == "PAID":
+                    agent_reply = f"Haan! {items_str} ka Rs. {target_sale.total_amount:.2f} payment receive ho chuka hai (PAID ✅)."
+                elif target_sale.status == "PARTIAL":
+                    agent_reply = f"{items_str} ke liye Rs. {target_sale.received_amount:.2f} receive hua hai, lekin Rs. {target_sale.outstanding_amount:.2f} abhi pending hai (PARTIAL ⚠️)."
+                elif target_sale.status == "FAILED":
+                    agent_reply = f"{items_str} ka payment fail ho gaya hai (FAILED ❌)."
+                else:
+                    agent_reply = f"Nahi, {items_str} ka Rs. {target_sale.outstanding_amount:.2f} payment abhi tak nahi aaya hai (PENDING ⏳)."
+
+                # Generate TTS voice audio
+                audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
+
+                return VoiceProcessResponse(
+                    extraction=extraction,
+                    agent_reply=agent_reply,
+                    audio_base64=audio_base64,
+                    sale={
+                        "id": target_sale.id,
+                        "status": target_sale.status,
+                        "total_amount": target_sale.total_amount,
+                        "received_amount": target_sale.received_amount,
+                        "outstanding_amount": target_sale.outstanding_amount,
+                        "payment_link_url": target_sale.razorpay_payment_link_url
+                    },
+                    action_taken="PAYMENT_STATUS_CHECKED"
+                )
+            else:
+                agent_reply = "Abhi tak koi sale record nahi hui hai."
+                audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
+                return VoiceProcessResponse(
+                    extraction=extraction,
+                    agent_reply=agent_reply,
+                    audio_base64=audio_base64,
+                    action_taken="NO_SALES_FOUND"
+                )
+
+        # 3. Handle Intent: Record a new product sale
+        elif intent == "record_sale" and extraction.items:
             sale_items = [
                 SaleItemCreate(
                     product_name=item.product_name,
@@ -39,9 +90,8 @@ class MerchantAgent:
                 for item in extraction.items
             ]
             sale_in = SaleCreate(
-                customer_name=extraction.customer_name or "Walk-in Customer",
-                customer_phone=extraction.customer_phone,
                 items=sale_items,
+                customer_name=extraction.customer_name or "Store Customer",
                 raw_voice_transcript=request.text,
                 auto_create_payment_link=True
             )
@@ -49,14 +99,19 @@ class MerchantAgent:
 
             items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in sale.items])
             link_note = f"Razorpay Payment Link ready: {sale.razorpay_payment_link_url}" if sale.razorpay_payment_link_url else ""
-            agent_reply = f"₹{sale.total_amount:.2f} ka sale record ho gaya ({items_str}) for {sale.customer_name}. {link_note}"
+            agent_reply = f"Rs. {sale.total_amount:.2f} ka sale record ho gaya ({items_str}). {link_note}"
+            
+            # Generate TTS voice audio
+            spoken_text = f"Rs. {sale.total_amount:.0f} ka sale record ho gaya. {items_str}."
+            audio_base64 = tts_service.generate_speech_base64(spoken_text, lang=request.voice_lang) if request.speak_response else None
 
             return VoiceProcessResponse(
                 extraction=extraction,
                 agent_reply=agent_reply,
+                audio_base64=audio_base64,
                 sale={
                     "id": sale.id,
-                    "customer_name": sale.customer_name,
+                    "items": items_str,
                     "total_amount": sale.total_amount,
                     "received_amount": sale.received_amount,
                     "outstanding_amount": sale.outstanding_amount,
@@ -66,86 +121,30 @@ class MerchantAgent:
                 action_taken="SALE_CREATED"
             )
 
+        # 4. Handle Intent: Query Pending / Collection Summaries
         elif intent in ["query_pending", "query_daily", "general_qa"]:
-            # Tool: Query Financial Metrics
             metrics = self._get_summary_metrics(db)
             agent_reply = llm_service.answer_query(request.text, metrics)
+            audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
             return VoiceProcessResponse(
                 extraction=extraction,
                 agent_reply=agent_reply,
+                audio_base64=audio_base64,
                 action_taken="QUERY_ANSWERED"
             )
 
-        elif intent == "query_status":
-            # Tool: Query Customer Payment Status
-            cust_name = extraction.customer_name
-            if cust_name:
-                sale = db.query(Sale).filter(Sale.customer_name.ilike(f"%{cust_name}%")).order_by(Sale.created_at.desc()).first()
-                if sale:
-                    if sale.status == "PAID":
-                        agent_reply = f"{sale.customer_name} ka ₹{sale.total_amount:.2f} payment receive ho chuka hai (PAID ✅)."
-                    elif sale.status == "PARTIAL":
-                        agent_reply = f"{sale.customer_name} ne ₹{sale.received_amount:.2f} pay kiya hai, lekin ₹{sale.outstanding_amount:.2f} abhi pending hai (PARTIAL ⚠️)."
-                    else:
-                        agent_reply = f"{sale.customer_name} ka ₹{sale.outstanding_amount:.2f} payment abhi pending hai."
-                    return VoiceProcessResponse(
-                        extraction=extraction,
-                        agent_reply=agent_reply,
-                        sale={"id": sale.id, "customer_name": sale.customer_name, "status": sale.status, "outstanding": sale.outstanding_amount},
-                        action_taken="STATUS_CHECKED"
-                    )
-            
-            agent_reply = "Aapka customer record nahi mila. Kripya customer ka naam specify karein."
-            return VoiceProcessResponse(
-                extraction=extraction,
-                agent_reply=agent_reply,
-                action_taken="NO_CUSTOMER_FOUND"
-            )
-
-        elif intent == "trigger_recovery":
-            # Tool: Trigger Payment Link Recovery
-            cust_name = extraction.customer_name
-            sale = None
-            if cust_name:
-                sale = db.query(Sale).filter(
-                    Sale.customer_name.ilike(f"%{cust_name}%"),
-                    Sale.outstanding_amount > 0
-                ).order_by(Sale.created_at.desc()).first()
-
-            if not sale:
-                # Get the highest priority pending sale
-                queue = recovery_service.get_recovery_queue(db)
-                if queue:
-                    sale = db.query(Sale).filter(Sale.id == queue[0].sale_id).first()
-
-            if sale:
-                action_result = recovery_service.trigger_recovery_action(db, sale_id=sale.id)
-                agent_reply = f"{sale.customer_name} ko ₹{sale.outstanding_amount:.2f} ke liye recovery reminder WhatsApp par bhej diya gaya hai."
-                return VoiceProcessResponse(
-                    extraction=extraction,
-                    agent_reply=agent_reply,
-                    sale={"id": sale.id, "customer_name": sale.customer_name, "outstanding": sale.outstanding_amount},
-                    action_taken="RECOVERY_TRIGGERED"
-                )
-            else:
-                agent_reply = "Filhaal koi outstanding payment pending nahi hai jiske liye reminder bheja jaye."
-                return VoiceProcessResponse(
-                    extraction=extraction,
-                    agent_reply=agent_reply,
-                    action_taken="NO_PENDING_PAYMENTS"
-                )
-
         # Default fallback
         agent_reply = extraction.explanation or "Aapka command samajh nahi aaya. Kripya dobara try karein."
+        audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
         return VoiceProcessResponse(
             extraction=extraction,
             agent_reply=agent_reply,
+            audio_base64=audio_base64,
             action_taken="UNKNOWN_INTENT"
         )
 
     def _get_summary_metrics(self, db: Session) -> Dict[str, Any]:
         today_start = datetime.combine(date.today(), datetime.min.time())
-        
         sales_today = db.query(Sale).filter(Sale.created_at >= today_start).all()
         today_sales = sum(s.total_amount for s in sales_today)
         
