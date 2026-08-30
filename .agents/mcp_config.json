@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "voiceledger": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "backend.mcp_server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

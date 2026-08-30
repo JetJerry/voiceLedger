@@ -12,6 +12,7 @@ dependencies = [
     "gtts>=2.5.4",
     "httpx>=0.28.1",
     "jinja2>=3.1.6",
+    "mcp>=2.1.1",
     "nest-asyncio>=1.6.0",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",

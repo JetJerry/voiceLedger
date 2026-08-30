@@ -63,9 +63,19 @@ def health_check():
     }
 
 
-# Frontend Static Files Mount
+# Frontend Static Files Mount (React Native Web & Static Assets)
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
-if frontend_dir.exists():
+dist_dir = frontend_dir / "dist"
+
+if dist_dir.exists():
+    app.mount("/_expo", StaticFiles(directory=str(dist_dir / "_expo")), name="expo-static")
+    if (dist_dir / "assets").exists():
+        app.mount("/assets", StaticFiles(directory=str(dist_dir / "assets")), name="assets-static")
+    
+    @app.get("/", include_in_schema=False)
+    async def serve_index():
+        return FileResponse(dist_dir / "index.html")
+elif frontend_dir.exists():
     app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
 
     @app.get("/", include_in_schema=False)

@@ -11,13 +11,37 @@ class RazorpayService:
     BASE_URL = "https://api.razorpay.com/v1"
 
     def __init__(self):
-        self.key_id = settings.RAZORPAY_KEY_ID
-        self.key_secret = settings.RAZORPAY_KEY_SECRET
-        self.webhook_secret = settings.RAZORPAY_WEBHOOK_SECRET
+        self._key_id: Optional[str] = None
+        self._key_secret: Optional[str] = None
+        self._webhook_secret: Optional[str] = None
+
+    @property
+    def key_id(self) -> str:
+        return self._key_id if self._key_id is not None else settings.RAZORPAY_KEY_ID
+
+    @key_id.setter
+    def key_id(self, val: str):
+        self._key_id = val
+
+    @property
+    def key_secret(self) -> str:
+        return self._key_secret if self._key_secret is not None else settings.RAZORPAY_KEY_SECRET
+
+    @key_secret.setter
+    def key_secret(self, val: str):
+        self._key_secret = val
+
+    @property
+    def webhook_secret(self) -> str:
+        return self._webhook_secret if self._webhook_secret is not None else settings.RAZORPAY_WEBHOOK_SECRET
+
+    @webhook_secret.setter
+    def webhook_secret(self, val: str):
+        self._webhook_secret = val
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.key_id and self.key_secret)
+        return bool(self.key_id and self.key_secret and not self.key_id.startswith("rzp_test_YOUR"))
 
     def create_payment_link(
         self,

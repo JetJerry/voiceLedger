@@ -6,22 +6,47 @@ Welcome to **VoiceLedger**! This guide explains how to configure your API keys, 
 
 ## 1. Quick Start
 
-### Step 1: Install Dependencies
+### Step 1: Install Backend & Frontend Dependencies
 ```bash
-# Using uv (Recommended)
+# Backend (using uv or pip)
 uv sync
+# or: pip install -r backend/requirements.txt
 
-# Or using pip
-pip install -r backend/requirements.txt
+# Frontend (React Native Universal Web & Mobile)
+cd frontend
+npm install
+cd ..
 ```
 
-### Step 2: Run VoiceLedger
+### Step 2: Run the Backend & React Native Frontend
+
+#### Option A: Run Unified Fullstack (FastAPI serves React Native Web build)
 ```bash
+# 1. Build the React Native web bundle once:
+cd frontend && npm run build:web && cd ..
+
+# 2. Start the VoiceLedger server:
 python main.py
 ```
+Open **[http://localhost:8000](http://localhost:8000)** in your browser.
 
-### Step 3: Open in Browser
-Visit **[http://localhost:8000](http://localhost:8000)** in Google Chrome or Microsoft Edge.
+---
+
+#### Option B: Run Universal Live Dev Server (for Smartphone & Web)
+```bash
+# 1. Start Backend:
+python main.py
+
+# 2. In a new terminal, start Expo React Native:
+cd frontend
+npx expo start
+```
+- **Web**: Press `w` in terminal or open **[http://localhost:8081](http://localhost:8081)**.
+- **Smartphone (iOS / Android)**:
+  1. Install the free **Expo Go** app from App Store or Google Play on your phone.
+  2. Make sure your phone and computer are on the same Wi-Fi.
+  3. Scan the QR code shown in your terminal with your phone's camera (iOS) or Expo Go app (Android).
+  4. In the app header, tap the ⚙️ settings icon and set your computer's local IP (e.g. `http://192.168.1.X:8000/api`) to connect to your backend.
 
 ---
 

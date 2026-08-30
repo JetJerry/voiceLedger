@@ -25,3 +25,13 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Node & React Native / Expo
+node_modules/
+.expo/
+web-build/
+dist/
+.npm/
+
+# Local binaries & tools
+bin/
