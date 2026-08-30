@@ -1,0 +1,161 @@
+import hmac
+import hashlib
+import json
+import uuid
+import httpx
+from typing import Dict, Any, Optional
+from backend.app.config import settings
+
+
+class RazorpayService:
+    BASE_URL = "https://api.razorpay.com/v1"
+
+    def __init__(self):
+        self.key_id = settings.RAZORPAY_KEY_ID
+        self.key_secret = settings.RAZORPAY_KEY_SECRET
+        self.webhook_secret = settings.RAZORPAY_WEBHOOK_SECRET
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.key_id and self.key_secret)
+
+    def create_payment_link(
+        self,
+        amount: float,
+        sale_id: str,
+        customer_name: Optional[str] = None,
+        customer_phone: Optional[str] = None,
+        description: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Creates a Razorpay Test Mode Payment Link.
+        Converts INR to paise (e.g. ₹200.00 -> 20000 paise).
+        """
+        amount_in_paise = int(round(amount * 100))
+        if amount_in_paise <= 0:
+            raise ValueError("Amount must be greater than 0")
+
+        # 1. Live Razorpay Test Mode Call if keys are configured
+        if self.is_configured:
+            try:
+                payload = {
+                    "amount": amount_in_paise,
+                    "currency": "INR",
+                    "accept_partial": True,
+                    "first_min_partial_amount": 100,
+                    "description": description or f"Payment for Sale #{sale_id}",
+                    "customer": {
+                        "name": customer_name or "Valued Customer",
+                        "contact": customer_phone or "+919999999999"
+                    },
+                    "notify": {
+                        "sms": False,
+                        "email": False
+                    },
+                    "reminder_enable": True,
+                    "notes": {
+                        "sale_id": str(sale_id),
+                        "merchant_name": settings.DEFAULT_MERCHANT_NAME
+                    }
+                }
+                
+                with httpx.Client(auth=(self.key_id, self.key_secret), timeout=10.0) as client:
+                    response = client.post(f"{self.BASE_URL}/payment_links", json=payload)
+                    
+                if response.status_code in [200, 201]:
+                    data = response.json()
+                    return {
+                        "id": data.get("id"),
+                        "short_url": data.get("short_url"),
+                        "amount": amount,
+                        "currency": "INR",
+                        "status": data.get("status", "created"),
+                        "sale_id": sale_id,
+                        "is_live_api": True
+                    }
+                else:
+                    print(f"Razorpay API Error ({response.status_code}): {response.text}")
+            except Exception as e:
+                print(f"Razorpay connection error: {e}")
+
+        # 2. Test Mode Sandbox Simulation (Deterministic Test Link for zero-key local demo)
+        sim_id = f"plink_{uuid.uuid4().hex[:14]}"
+        sim_url = f"https://rzp.io/i/{sim_id[:8]}"
+        return {
+            "id": sim_id,
+            "short_url": sim_url,
+            "amount": amount,
+            "currency": "INR",
+            "status": "created",
+            "sale_id": sale_id,
+            "is_live_api": False
+        }
+
+    def verify_webhook_signature(self, raw_body: bytes, signature: str) -> bool:
+        """
+        Verifies Razorpay Webhook HMAC SHA256 signature.
+        """
+        if not self.webhook_secret:
+            # If no webhook secret configured in dev mode, permit for ease of testing
+            return True
+
+        if not signature:
+            return False
+
+        try:
+            expected_signature = hmac.new(
+                key=self.webhook_secret.encode("utf-8"),
+                msg=raw_body,
+                digestmod=hashlib.sha256
+            ).hexdigest()
+            return hmac.compare_digest(expected_signature, signature)
+        except Exception as e:
+            print(f"Webhook signature verification failed: {e}")
+            return False
+
+    def simulate_test_webhook_payload(
+        self,
+        sale_id: str,
+        amount: float,
+        payment_link_id: Optional[str] = None,
+        status: str = "captured"
+    ) -> Dict[str, Any]:
+        """
+        Helper to construct a realistic Razorpay webhook payload for test/demo simulations.
+        """
+        pay_id = f"pay_{uuid.uuid4().hex[:14]}"
+        link_id = payment_link_id or f"plink_{uuid.uuid4().hex[:14]}"
+        amount_paise = int(round(amount * 100))
+
+        return {
+            "entity": "event",
+            "account_id": "acc_voiceledger_test",
+            "event": "payment_link.paid" if status == "captured" else "payment.failed",
+            "contains": ["payment", "payment_link"],
+            "payload": {
+                "payment_link": {
+                    "entity": {
+                        "id": link_id,
+                        "amount": amount_paise,
+                        "amount_paid": amount_paise,
+                        "status": "paid" if status == "captured" else "partially_paid",
+                        "notes": {"sale_id": sale_id}
+                    }
+                },
+                "payment": {
+                    "entity": {
+                        "id": pay_id,
+                        "amount": amount_paise,
+                        "currency": "INR",
+                        "status": status,
+                        "method": "upi",
+                        "vpa": "customer@okhdfcbank",
+                        "notes": {"sale_id": sale_id}
+                    }
+                }
+            },
+            "created_at": 1740000000
+        }
+
+
+razorpay_service = RazorpayService()

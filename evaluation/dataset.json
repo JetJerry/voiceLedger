@@ -1,0 +1,1702 @@
+[
+  {
+    "id": "txn_001",
+    "speech_input": "Priya se 3 sandwich ka payment lena hai.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 3,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 240.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 168.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_002",
+    "speech_input": "Rohan se 3 coffee ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 3,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 150.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 75.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_003",
+    "speech_input": "Neha ko three veg pizza pack kar diya.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 3,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 750.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 750.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_004",
+    "speech_input": "Customer Vikram, two sandwich order kiya.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 2,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 160.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 160.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_005",
+    "speech_input": "Customer Suresh, one veg pizza order kiya.",
+    "expected_customer": "Suresh",
+    "customer_phone": "+919876543215",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 1,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 250.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_006",
+    "speech_input": "Amit se ek burger ka payment lena hai.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 1,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 70.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_007",
+    "speech_input": "Customer Pooja, 1 sandwich order kiya.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 1,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 80.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 80.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_008",
+    "speech_input": "Deepak ko 3 veg thali pack kar diya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 3,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 540.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_009",
+    "speech_input": "Rahul ko three cheese burger diye.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 450.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_010",
+    "speech_input": "Suresh se 2 cheese burger ka payment lena hai.",
+    "expected_customer": "Suresh",
+    "customer_phone": "+919876543215",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_011",
+    "speech_input": "Rohan ko three burger diye.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 3,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_012",
+    "speech_input": "Ananya ko teen pizza diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 3,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 900.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 900.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_013",
+    "speech_input": "Ananya ko ek sandwich diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 1,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 80.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 24.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_014",
+    "speech_input": "Ananya ko one paneer roll diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 60.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_015",
+    "speech_input": "Rahul se 2 cheese burger ka payment lena hai.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_016",
+    "speech_input": "Rahul ko teen veg pizza diye, 250 each.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 3,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 750.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 525.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_017",
+    "speech_input": "Rohan se teen cheese burger ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 315.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_018",
+    "speech_input": "Rohan ko 1 paneer roll pack kar diya.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 120.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_019",
+    "speech_input": "Deepak se one coffee ka payment lena hai.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 1,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 50.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_020",
+    "speech_input": "Vikram ko three coffee diye.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 3,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 150.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 150.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_021",
+    "speech_input": "Rohan se do paneer roll ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 2,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 240.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 240.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_022",
+    "speech_input": "Priya ko do cheese burger pack kar diya.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 300.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_023",
+    "speech_input": "Ananya ko teen veg pizza diye, 250 each.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 3,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 750.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 750.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_024",
+    "speech_input": "Amit ko ek burger diye, 100 each.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 1,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 100.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_025",
+    "speech_input": "Suresh ko teen cheese burger diye.",
+    "expected_customer": "Suresh",
+    "customer_phone": "+919876543215",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_026",
+    "speech_input": "Rohan ko teen veg pizza pack kar diya.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 3,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 750.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 525.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_027",
+    "speech_input": "Rohan se 2 veg pizza ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 2,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 500.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_028",
+    "speech_input": "Amit ko 3 cheese burger diye.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 450.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_029",
+    "speech_input": "Pooja ko two coffee diye, 50 each.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 2,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_030",
+    "speech_input": "Amit ko two burger diye.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 2,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 200.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 200.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_031",
+    "speech_input": "Amit ko ek veg pizza pack kar diya.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 1,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 250.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 250.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_032",
+    "speech_input": "Rohan ko do pizza diye.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 300.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_033",
+    "speech_input": "Priya ko two cheese burger diye, 150 each.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 90.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_034",
+    "speech_input": "Ananya se ek burger ka payment lena hai.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 1,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_035",
+    "speech_input": "Customer Pooja, do veg thali order kiya.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 2,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 360.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_036",
+    "speech_input": "Customer Rahul, do pizza order kiya.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 300.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_037",
+    "speech_input": "Rohan ko two coke pack kar diya.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 2,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 80.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 80.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_038",
+    "speech_input": "Rohan se 1 pizza ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 1,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 90.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_039",
+    "speech_input": "Deepak ko one paneer roll diye.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_040",
+    "speech_input": "Rahul ko 3 burger pack kar diya.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 3,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 300.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_041",
+    "speech_input": "Ananya ko one pizza diye, 300 each.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 1,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 300.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_042",
+    "speech_input": "Neha se teen cheese burger ka payment lena hai.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 450.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_043",
+    "speech_input": "Pooja ko teen cheese burger pack kar diya.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 450.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_044",
+    "speech_input": "Customer Deepak, teen burger order kiya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 3,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 210.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_045",
+    "speech_input": "Deepak ko 3 sandwich diye.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 3,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 240.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 240.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_046",
+    "speech_input": "Customer Priya, 1 chai order kiya.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 1,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 20.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_047",
+    "speech_input": "Neha ko 2 coke diye, 40 each.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 2,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 80.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_048",
+    "speech_input": "Rahul ko three veg thali diye, 180 each.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 3,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 540.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_049",
+    "speech_input": "Amit ko one paneer roll diye.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 120.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_050",
+    "speech_input": "Neha ko ek chai diye.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 1,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 20.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 20.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_051",
+    "speech_input": "Vikram ko two pizza diye.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 600.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_052",
+    "speech_input": "Deepak ko one paneer roll pack kar diya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 60.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_053",
+    "speech_input": "Amit ko do pizza diye, 300 each.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 600.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_054",
+    "speech_input": "Ananya ko 2 pizza pack kar diya.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 180.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_055",
+    "speech_input": "Suresh ko three veg pizza diye.",
+    "expected_customer": "Suresh",
+    "customer_phone": "+919876543215",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 3,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 750.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 750.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_056",
+    "speech_input": "Ananya ko do veg thali diye, 180 each.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 2,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 360.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 360.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_057",
+    "speech_input": "Pooja ko ek coke diye.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 1,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 40.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 12.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_058",
+    "speech_input": "Vikram ko 3 pizza pack kar diya.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 3,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 900.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_059",
+    "speech_input": "Pooja ko ek paneer roll diye, 120 each.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 120.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_060",
+    "speech_input": "Neha ko 1 paneer roll pack kar diya.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_061",
+    "speech_input": "Ananya ko do pizza diye, 300 each.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 2,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 600.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 600.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_062",
+    "speech_input": "Vikram se 1 chai ka payment lena hai.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 1,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 20.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 20.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_063",
+    "speech_input": "Customer Priya, two cheese burger order kiya.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 300.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_064",
+    "speech_input": "Deepak se ek pizza ka payment lena hai.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 1,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_065",
+    "speech_input": "Pooja ko one burger diye.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 1,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_066",
+    "speech_input": "Pooja ko do veg pizza diye, 250 each.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 2,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 500.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 500.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_067",
+    "speech_input": "Pooja se do burger ka payment lena hai.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "burger",
+        "quantity": 2,
+        "price": 100.0
+      }
+    ],
+    "expected_total": 200.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_068",
+    "speech_input": "Rohan se do chai ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 2,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 40.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 12.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_069",
+    "speech_input": "Priya ko 2 coffee diye, 50 each.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 2,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 100.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_070",
+    "speech_input": "Customer Vikram, three chai order kiya.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 3,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 60.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 60.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_071",
+    "speech_input": "Ananya ko ek chai diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 1,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 20.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 20.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_072",
+    "speech_input": "Neha ko do sandwich diye, 80 each.",
+    "expected_customer": "Neha",
+    "customer_phone": "+919876543212",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 2,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 160.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 160.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_073",
+    "speech_input": "Deepak ko two coffee diye.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 2,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 100.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 50.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_074",
+    "speech_input": "Deepak ko 1 paneer roll pack kar diya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 1,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 120.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_075",
+    "speech_input": "Customer Priya, one coke order kiya.",
+    "expected_customer": "Priya",
+    "customer_phone": "+919876543213",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 1,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 40.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 12.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_076",
+    "speech_input": "Ananya se three paneer roll ka payment lena hai.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "paneer roll",
+        "quantity": 3,
+        "price": 120.0
+      }
+    ],
+    "expected_total": 360.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_077",
+    "speech_input": "Suresh ko one coffee diye.",
+    "expected_customer": "Suresh",
+    "customer_phone": "+919876543215",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 1,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 50.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 50.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_078",
+    "speech_input": "Deepak ko teen chai diye.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 3,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 60.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_079",
+    "speech_input": "Ananya ko 3 coke diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 3,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_080",
+    "speech_input": "Pooja se teen coke ka payment lena hai.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 3,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 120.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_081",
+    "speech_input": "Pooja se three coffee ka payment lena hai.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 3,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 150.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_082",
+    "speech_input": "Deepak ko 2 sandwich pack kar diya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 2,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 160.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 160.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_083",
+    "speech_input": "Customer Rahul, do coke order kiya.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "coke",
+        "quantity": 2,
+        "price": 40.0
+      }
+    ],
+    "expected_total": 80.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 80.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_084",
+    "speech_input": "Customer Deepak, 3 sandwich order kiya.",
+    "expected_customer": "Deepak",
+    "customer_phone": "+919876543219",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 3,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 240.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_085",
+    "speech_input": "Rohan ko teen veg thali pack kar diya.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 3,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 540.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 540.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_086",
+    "speech_input": "Rohan ko teen pizza diye.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "pizza",
+        "quantity": 3,
+        "price": 300.0
+      }
+    ],
+    "expected_total": 900.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 900.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_087",
+    "speech_input": "Ananya se do sandwich ka payment lena hai.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 2,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 160.0,
+    "payment_scenario": "PARTIAL",
+    "payment_amount": 112.0,
+    "target_status": "PARTIAL"
+  },
+  {
+    "id": "txn_088",
+    "speech_input": "Vikram ko ek veg pizza diye, 250 each.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 1,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 250.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_089",
+    "speech_input": "Rahul ko two veg pizza diye, 250 each.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "veg pizza",
+        "quantity": 2,
+        "price": 250.0
+      }
+    ],
+    "expected_total": 500.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 500.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_090",
+    "speech_input": "Rohan se three coffee ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 3,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 150.0,
+    "payment_scenario": "PENDING",
+    "payment_amount": 0.0,
+    "target_status": "PENDING"
+  },
+  {
+    "id": "txn_091",
+    "speech_input": "Pooja se do veg thali ka payment lena hai.",
+    "expected_customer": "Pooja",
+    "customer_phone": "+919876543216",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 2,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 360.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  },
+  {
+    "id": "txn_092",
+    "speech_input": "Rahul se do cheese burger ka payment lena hai.",
+    "expected_customer": "Rahul",
+    "customer_phone": "+919876543210",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 2,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 300.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 300.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_093",
+    "speech_input": "Ananya se one veg thali ka payment lena hai.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 1,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 180.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 180.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_094",
+    "speech_input": "Amit ko 1 veg thali pack kar diya.",
+    "expected_customer": "Amit",
+    "customer_phone": "+919876543211",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 1,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 180.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 180.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_095",
+    "speech_input": "Ananya ko 2 sandwich pack kar diya.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "sandwich",
+        "quantity": 2,
+        "price": 80.0
+      }
+    ],
+    "expected_total": 160.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 160.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_096",
+    "speech_input": "Ananya se 3 coffee ka payment lena hai.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "coffee",
+        "quantity": 3,
+        "price": 50.0
+      }
+    ],
+    "expected_total": 150.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 150.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_097",
+    "speech_input": "Rohan ko do veg thali diye.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 2,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 360.0,
+    "payment_scenario": "UNMATCHED",
+    "payment_amount": 360.0,
+    "target_status": "UNMATCHED"
+  },
+  {
+    "id": "txn_098",
+    "speech_input": "Ananya ko teen veg thali diye.",
+    "expected_customer": "Ananya",
+    "customer_phone": "+919876543218",
+    "expected_items": [
+      {
+        "name": "veg thali",
+        "quantity": 3,
+        "price": 180.0
+      }
+    ],
+    "expected_total": 540.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 540.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_099",
+    "speech_input": "Rohan se 3 cheese burger ka payment lena hai.",
+    "expected_customer": "Rohan",
+    "customer_phone": "+919876543217",
+    "expected_items": [
+      {
+        "name": "cheese burger",
+        "quantity": 3,
+        "price": 150.0
+      }
+    ],
+    "expected_total": 450.0,
+    "payment_scenario": "FULL",
+    "payment_amount": 450.0,
+    "target_status": "PAID"
+  },
+  {
+    "id": "txn_100",
+    "speech_input": "Vikram ko two chai diye, 20 each.",
+    "expected_customer": "Vikram",
+    "customer_phone": "+919876543214",
+    "expected_items": [
+      {
+        "name": "chai",
+        "quantity": 2,
+        "price": 20.0
+      }
+    ],
+    "expected_total": 40.0,
+    "payment_scenario": "FAILED",
+    "payment_amount": 0.0,
+    "target_status": "FAILED"
+  }
+]

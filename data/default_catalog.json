@@ -1,0 +1,29 @@
+{
+  "merchant": {
+    "name": "Kirana & Cafe Express",
+    "currency": "INR"
+  },
+  "products": [
+    {"name": "burger", "price": 100.0, "category": "Fast Food"},
+    {"name": "cheese burger", "price": 150.0, "category": "Fast Food"},
+    {"name": "veg pizza", "price": 250.0, "category": "Pizza"},
+    {"name": "pizza", "price": 300.0, "category": "Pizza"},
+    {"name": "coke", "price": 40.0, "category": "Beverages"},
+    {"name": "cold drink", "price": 40.0, "category": "Beverages"},
+    {"name": "tea", "price": 20.0, "category": "Beverages"},
+    {"name": "chai", "price": 20.0, "category": "Beverages"},
+    {"name": "coffee", "price": 50.0, "category": "Beverages"},
+    {"name": "veg thali", "price": 180.0, "category": "Meals"},
+    {"name": "paneer roll", "price": 120.0, "category": "Snacks"},
+    {"name": "samosa", "price": 25.0, "category": "Snacks"},
+    {"name": "sandwich", "price": 80.0, "category": "Snacks"}
+  ],
+  "customers": [
+    {"name": "Rahul", "phone": "+919876543210"},
+    {"name": "Amit", "phone": "+919876543211"},
+    {"name": "Neha", "phone": "+919876543212"},
+    {"name": "Priya", "phone": "+919876543213"},
+    {"name": "Vikram", "phone": "+919876543214"},
+    {"name": "Suresh", "phone": "+919876543215"}
+  ]
+}
