@@ -1,34 +1,35 @@
 export const colors = {
-  bgDark: '#0a0e17',
-  bgCard: 'rgba(18, 24, 38, 0.85)',
-  bgCardHover: 'rgba(28, 36, 56, 0.95)',
-  bgCardSolid: '#121826',
-  borderColor: 'rgba(255, 255, 255, 0.08)',
-  borderColorHover: 'rgba(99, 102, 241, 0.3)',
-  
-  primary: '#6366f1',
-  primaryHover: '#4f46e5',
-  primaryGlow: 'rgba(99, 102, 241, 0.4)',
-  
-  accentCyan: '#06b6d4',
-  accentViolet: '#8b5cf6',
-  accentAmber: '#f59e0b',
-  accentRose: '#f43f5e',
-  accentEmerald: '#10b981',
-  
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  
-  badgePaidBg: 'rgba(16, 185, 129, 0.15)',
-  badgePaidText: '#34d399',
-  badgePaidBorder: 'rgba(16, 185, 129, 0.3)',
-  
-  badgePartialBg: 'rgba(245, 158, 11, 0.15)',
-  badgePartialText: '#fbbf24',
-  badgePartialBorder: 'rgba(245, 158, 11, 0.3)',
-  
-  badgePendingBg: 'rgba(244, 63, 94, 0.15)',
-  badgePendingText: '#fb7185',
-  badgePendingBorder: 'rgba(244, 63, 94, 0.3)',
+  // Light theme palette
+  bg: '#FFFFFF',
+  bgCard: '#FFFFFF',
+  bgCardHover: '#F8FAFC',
+  bgCardSolid: '#FFFFFF',
+  borderColor: '#E6EEF8',
+  borderColorHover: '#D6E4FF',
+
+  primary: '#4F46E5',
+  primaryHover: '#4338CA',
+  primaryGlow: 'rgba(79, 70, 229, 0.12)',
+
+  accentCyan: '#0EA5A4',
+  accentViolet: '#7C3AED',
+  accentAmber: '#D97706',
+  accentRose: '#EF4444',
+  accentEmerald: '#10B981',
+
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#6B7280',
+
+  badgePaidBg: 'rgba(16, 185, 129, 0.12)',
+  badgePaidText: '#047857',
+  badgePaidBorder: 'rgba(16, 185, 129, 0.2)',
+
+  badgePartialBg: 'rgba(245, 158, 11, 0.12)',
+  badgePartialText: '#92400E',
+  badgePartialBorder: 'rgba(245, 158, 11, 0.2)',
+
+  badgePendingBg: 'rgba(239, 68, 68, 0.08)',
+  badgePendingText: '#B91C1C',
+  badgePendingBorder: 'rgba(239, 68, 68, 0.15)',
 };
