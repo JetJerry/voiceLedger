@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     LLM_PROVIDER: str = "groq"  # groq, gemini, openai, or mock
     LLM_MODEL: str = "llama-3.3-70b-versatile"  # legacy alias; Groq uses GROQ_MODEL
+
+    # LangSmith Tracing & Observability
+    LANGCHAIN_TRACING_V2: bool = True
+    LANGCHAIN_API_KEY: str = ""
+    LANGCHAIN_PROJECT: str = "voiceledger-agent"
+    LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
     
     # HuggingFace Model Configuration (Optimized for 4GB GPU & High-Speed CPU)
     WHISPER_MODEL_SIZE: str = "base"        # base (~140MB, <100ms) or small (~460MB)

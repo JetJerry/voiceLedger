@@ -116,8 +116,13 @@ class SalesService:
         db.refresh(product)
         return product
 
-    def create_sale(self, db: Session, sale_in: SaleCreate) -> Sale:
-        merchant = self.get_or_create_merchant(db)
+    def create_sale(self, db: Session, sale_in: SaleCreate, merchant_id: Optional[int] = None) -> Sale:
+        if merchant_id:
+            merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+        else:
+            merchant = None
+        if not merchant:
+            merchant = self.get_or_create_merchant(db)
         sale_id = f"sale_{uuid.uuid4().hex[:10]}"
         
         sale = Sale(
