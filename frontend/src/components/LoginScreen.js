@@ -9,9 +9,10 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import { Lock, Store, ShieldCheck, UserCheck, Sparkles, ArrowRight } from 'lucide-react-native';
+import { Lock, Store, ShieldCheck, UserCheck, Sparkles, ArrowRight, Server, Check, Edit2 } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { apiService } from '../services/apiService';
+import { getApiBase, setCustomApiBase, DEFAULT_MODAL_API_URL } from '../config/api';
 
 const BUSINESS_TYPES = [
   'Kirana & Grocery',
@@ -50,11 +51,43 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [demoAccounts, setDemoAccounts] = useState(null);
 
+  // Backend Connection Settings
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [currentApiUrl, setCurrentApiUrl] = useState(getApiBase());
+  const [serverStatus, setServerStatus] = useState('checking'); // 'connected' | 'error' | 'checking'
+  const [testResult, setTestResult] = useState('');
+
+  const checkConnection = async (targetUrl = null) => {
+    setServerStatus('checking');
+    setTestResult('');
+    const base = targetUrl || getApiBase();
+    try {
+      const res = await fetch(`${base}/health`, { method: 'GET' });
+      if (res.ok) {
+        setServerStatus('connected');
+        setTestResult('🟢 Connected to Modal Cloud Backend!');
+      } else {
+        setServerStatus('error');
+        setTestResult(`🔴 Backend returned status ${res.status}`);
+      }
+    } catch (e) {
+      setServerStatus('error');
+      setTestResult(`🔴 Connection error: ${e.message}`);
+    }
+  };
+
   useEffect(() => {
+    checkConnection();
     // Load demo accounts for quick-click convenience
     apiService.getDemoAccounts()
-      .then((data) => setDemoAccounts(data))
-      .catch((e) => console.warn('Demo accounts error:', e.message));
+      .then((data) => {
+        setDemoAccounts(data);
+        setServerStatus('connected');
+      })
+      .catch((e) => {
+        console.warn('Demo accounts error:', e.message);
+        setServerStatus('error');
+      });
   }, []);
 
   const handleRoleChange = (role) => {
@@ -419,6 +452,63 @@ export default function LoginScreen({ onLoginSuccess }) {
           </View>
         )}
 
+        {/* ── Server API Connection Badge & Config ── */}
+        <View style={styles.serverConnectionWrap}>
+          <TouchableOpacity
+            style={styles.serverStatusBar}
+            onPress={() => setShowServerConfig(!showServerConfig)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.serverStatusLeft}>
+              <View style={[
+                styles.statusDot,
+                serverStatus === 'connected' ? styles.statusDotGreen : (serverStatus === 'error' ? styles.statusDotRed : styles.statusDotYellow)
+              ]} />
+              <Text style={styles.serverStatusText} numberOfLines={1}>
+                {serverStatus === 'connected' ? 'Cloud Backend Connected' : (serverStatus === 'error' ? 'Backend Disconnected' : 'Checking Backend...')}
+              </Text>
+            </View>
+            <Text style={styles.serverConfigToggle}>{showServerConfig ? '▲ Close' : '⚙️ API Server'}</Text>
+          </TouchableOpacity>
+
+          {showServerConfig && (
+            <View style={styles.serverConfigBox}>
+              <Text style={styles.serverConfigLabel}>Backend API Endpoint URL:</Text>
+              <TextInput
+                style={styles.serverConfigInput}
+                value={currentApiUrl}
+                onChangeText={setCurrentApiUrl}
+                placeholder="https://...modal.run/api"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+              />
+              <View style={styles.serverConfigActions}>
+                <TouchableOpacity
+                  style={styles.serverActionBtnSave}
+                  onPress={() => {
+                    setCustomApiBase(currentApiUrl);
+                    checkConnection(currentApiUrl);
+                  }}
+                >
+                  <Text style={styles.serverActionBtnText}>💾 Save & Test</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.serverActionBtnReset}
+                  onPress={() => {
+                    setCurrentApiUrl(DEFAULT_MODAL_API_URL);
+                    setCustomApiBase(DEFAULT_MODAL_API_URL);
+                    checkConnection(DEFAULT_MODAL_API_URL);
+                  }}
+                >
+                  <Text style={styles.serverActionBtnResetText}>↺ Reset to Modal</Text>
+                </TouchableOpacity>
+              </View>
+              {testResult ? <Text style={styles.testResultText}>{testResult}</Text> : null}
+            </View>
+          )}
+        </View>
+
         {/* Portal Footer */}
         <View style={styles.cardFooter}>
           <Text style={styles.cardFooterText}>
@@ -712,12 +802,118 @@ const styles = StyleSheet.create({
 
   // Card Footer
   cardFooter: {
-    marginTop: 20,
+    marginTop: 16,
     alignItems: 'center',
   },
   cardFooterText: {
     fontSize: 11,
     color: colors.textMuted,
     textAlign: 'center',
+  },
+
+  // Server Connection Status & Config Box
+  serverConnectionWrap: {
+    marginTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderColor,
+    paddingTop: 12,
+  },
+  serverStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  serverStatusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusDotGreen: {
+    backgroundColor: '#10b981',
+  },
+  statusDotRed: {
+    backgroundColor: '#ef4444',
+  },
+  statusDotYellow: {
+    backgroundColor: '#f59e0b',
+  },
+  serverStatusText: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  serverConfigToggle: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  serverConfigBox: {
+    marginTop: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+  },
+  serverConfigLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  serverConfigInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    color: colors.textPrimary,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  serverConfigActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  serverActionBtnSave: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  serverActionBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  serverActionBtnReset: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  serverActionBtnResetText: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  testResultText: {
+    marginTop: 8,
+    fontSize: 11,
+    color: colors.textPrimary,
   },
 });

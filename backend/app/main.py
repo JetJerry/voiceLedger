@@ -67,10 +67,11 @@ async def log_requests(request: Request, call_next):
         raise
 
 
-# CORS Middleware
+# CORS Middleware — configured to allow Vercel domains, localhost, and mobile apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["*"],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -94,8 +95,8 @@ def health_check():
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
-        "razorpay_configured": settings.RAZORPAY_KEY_ID != "",
-        "gemini_configured": settings.GEMINI_API_KEY != "",
+        "razorpay_configured": bool(settings.RAZORPAY_KEY_ID),
+        "gemini_configured": bool(settings.GEMINI_API_KEY),
         "huggingface_models": {
             "stt_model": f"openai/whisper-{settings.WHISPER_MODEL_SIZE}",
             "stt_device": settings.WHISPER_DEVICE,
@@ -105,11 +106,11 @@ def health_check():
     }
 
 
-# Frontend Static Files Mount (React Native Web & Static Assets)
+# Frontend Static Files Mount (for local monolithic runs)
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
 dist_dir = frontend_dir / "dist"
 
-if dist_dir.exists():
+if dist_dir.exists() and (dist_dir / "index.html").exists():
     app.mount("/_expo", StaticFiles(directory=str(dist_dir / "_expo")), name="expo-static")
     if (dist_dir / "assets").exists():
         app.mount("/assets", StaticFiles(directory=str(dist_dir / "assets")), name="assets-static")
@@ -117,12 +118,16 @@ if dist_dir.exists():
     @app.get("/", include_in_schema=False)
     async def serve_index():
         return FileResponse(dist_dir / "index.html")
-elif frontend_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
-
-    @app.get("/", include_in_schema=False)
-    async def serve_index():
-        return FileResponse(frontend_dir / "index.html")
+else:
+    @app.get("/", tags=["API Info"])
+    def root():
+        return {
+            "service": "VoiceLedger AI Backend API",
+            "version": settings.VERSION,
+            "status": "online",
+            "docs": "/docs",
+            "health": "/api/health"
+        }
 
 
 if __name__ == "__main__":
