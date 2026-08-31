@@ -17,7 +17,7 @@ export const apiService = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, speak_response: true, voice_lang: 'hi' }),
     });
     if (!res.ok) {
       throw new Error(`Voice processing error: ${res.status}`);

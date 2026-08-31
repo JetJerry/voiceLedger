@@ -1,10 +1,15 @@
-import hmac
 import hashlib
+import hmac
 import json
+import logging
 import uuid
+from typing import Any, Dict, Optional
+
 import httpx
-from typing import Dict, Any, Optional
+
 from backend.app.config import settings
+
+logger = logging.getLogger("voiceledger.razorpay")
 
 
 class RazorpayService:
@@ -59,6 +64,21 @@ class RazorpayService:
         if amount_in_paise <= 0:
             raise ValueError("Amount must be greater than 0")
 
+        # Format customer payload with valid non-repeating contact number
+        customer_payload = {
+            "name": customer_name or "Valued Customer"
+        }
+        if customer_phone:
+            digits = "".join(filter(str.isdigit, str(customer_phone)))
+            if len(digits) == 10:
+                customer_payload["contact"] = f"+91{digits}"
+            elif len(digits) > 10:
+                customer_payload["contact"] = f"+{digits}"
+            else:
+                customer_payload["contact"] = "+919876543210"
+        else:
+            customer_payload["contact"] = "+919876543210"
+
         # 1. Live Razorpay Test Mode Call if keys are configured
         if self.is_configured:
             try:
@@ -68,10 +88,7 @@ class RazorpayService:
                     "accept_partial": True,
                     "first_min_partial_amount": 100,
                     "description": description or f"Payment for Sale #{sale_id}",
-                    "customer": {
-                        "name": customer_name or "Valued Customer",
-                        "contact": customer_phone or "+919999999999"
-                    },
+                    "customer": customer_payload,
                     "notify": {
                         "sms": False,
                         "email": False
@@ -119,22 +136,33 @@ class RazorpayService:
         """
         Verifies Razorpay Webhook HMAC SHA256 signature.
         """
+        if not raw_body:
+            logger.warning("Razorpay webhook payload was empty")
+            return False
+
         if not self.webhook_secret:
-            # If no webhook secret configured in dev mode, permit for ease of testing
-            return True
+            if settings.DEBUG:
+                logger.warning("Razorpay webhook secret unset; allowing request in debug mode only")
+                return True
+            logger.error("Razorpay webhook secret is missing")
+            return False
 
         if not signature:
+            logger.warning("Missing Razorpay signature header")
             return False
 
         try:
             expected_signature = hmac.new(
                 key=self.webhook_secret.encode("utf-8"),
                 msg=raw_body,
-                digestmod=hashlib.sha256
+                digestmod=hashlib.sha256,
             ).hexdigest()
-            return hmac.compare_digest(expected_signature, signature)
-        except Exception as e:
-            print(f"Webhook signature verification failed: {e}")
+            is_valid = hmac.compare_digest(expected_signature, signature)
+            if not is_valid:
+                logger.warning("Razorpay webhook signature mismatch")
+            return is_valid
+        except Exception as exc:
+            logger.exception("Webhook signature verification failed: %s", exc)
             return False
 
     def simulate_test_webhook_payload(

@@ -1,19 +1,28 @@
 import uuid
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
+from backend.app.config import settings
 from backend.app.models import Merchant, Product, Sale, SaleItem
 from backend.app.schemas.sale import SaleCreate
 from backend.app.services.razorpay_service import razorpay_service
 
 
 class SalesService:
-    def get_or_create_merchant(self, db: Session) -> Merchant:
-        merchant = db.query(Merchant).first()
-        if not merchant:
-            merchant = Merchant(name="VoiceLedger Merchant", currency="INR")
-            db.add(merchant)
-            db.commit()
-            db.refresh(merchant)
+    def get_or_create_merchant(self, db: Session, merchant_name: Optional[str] = None, currency: str = "INR") -> Merchant:
+        normalized_name = (merchant_name or settings.DEFAULT_MERCHANT_NAME or "VoiceLedger Merchant").strip()
+
+        merchant = db.query(Merchant).filter(Merchant.name == normalized_name).first()
+        if merchant:
+            return merchant
+
+        merchant = db.query(Merchant).order_by(Merchant.created_at.desc()).first()
+        if merchant:
+            return merchant
+
+        merchant = Merchant(name=normalized_name, currency=currency or "INR")
+        db.add(merchant)
+        db.commit()
+        db.refresh(merchant)
         return merchant
 
     def find_product_price(self, db: Session, merchant_id: int, item_name: str) -> Tuple[Optional[Product], float]:
@@ -25,19 +34,69 @@ class SalesService:
         # 1. Exact match in DB
         product = db.query(Product).filter(
             Product.merchant_id == merchant_id,
-            Product.name == name_lower
+            Product.name == name_lower,
+            Product.is_active == True,
         ).first()
         if product:
             return product, float(product.price)
             
         # 2. Substring match in DB
-        products = db.query(Product).filter(Product.merchant_id == merchant_id).all()
+        products = db.query(Product).filter(
+            Product.merchant_id == merchant_id,
+            Product.is_active == True,
+        ).all()
         for p in products:
             if p.name in name_lower or name_lower in p.name:
                 return p, float(p.price)
                 
         # 3. Default unit price if uncataloged item and not specified in speech
         return None, 50.0
+
+    def add_or_update_product(
+        self,
+        db: Session,
+        name: str,
+        price: float = 0.0,
+        category: Optional[str] = "General",
+        unit: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> Product:
+        """
+        Add a new product or update an existing one in the merchant catalog.
+        Open schema — any item of any type/category can be added.
+        """
+        merchant = self.get_or_create_merchant(db)
+        clean_name = name.strip().lower()
+        
+        product = db.query(Product).filter(
+            Product.merchant_id == merchant.id,
+            Product.name == clean_name
+        ).first()
+
+        if product:
+            product.price = price if price > 0 else product.price
+            if category and category.lower() != "general":
+                product.category = category
+            if unit:
+                product.unit = unit
+            if description:
+                product.description = description
+            product.is_active = True
+        else:
+            product = Product(
+                merchant_id=merchant.id,
+                name=clean_name,
+                price=price,
+                category=category or "General",
+                unit=unit,
+                description=description,
+                is_active=True,
+            )
+            db.add(product)
+
+        db.commit()
+        db.refresh(product)
+        return product
 
     def create_sale(self, db: Session, sale_in: SaleCreate) -> Sale:
         merchant = self.get_or_create_merchant(db)

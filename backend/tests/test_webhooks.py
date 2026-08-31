@@ -131,3 +131,21 @@ def test_webhook_valid_signature_accepted(client, db_session, monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["status"] == "success"
+
+
+def test_merchant_onboarding_endpoint(client):
+    payload = {
+        "name": "Bharat Cafe",
+        "currency": "INR"
+    }
+
+    response = client.post("/api/sales/catalog/merchant", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Bharat Cafe"
+    assert data["currency"] == "INR"
+
+    list_response = client.get("/api/sales/catalog/merchant")
+    assert list_response.status_code == 200
+    assert list_response.json()["name"] == "Bharat Cafe"

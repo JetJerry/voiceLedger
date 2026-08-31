@@ -3,15 +3,16 @@ from pydantic import BaseModel, Field
 
 
 class VoiceItemExtracted(BaseModel):
-    product_name: str = Field(..., description="Recognized item name from speech, e.g. coffee, shirt, burger, pen")
+    product_name: str = Field(..., description="Recognized item name from speech — any item, any category")
     quantity: int = Field(default=1, description="Quantity ordered")
     unit_price: Optional[float] = Field(default=None, description="Spoken unit price if explicitly stated")
+    category: Optional[str] = Field(default=None, description="Item category if mentioned (e.g. Snacks, Beverages, Stationery)")
 
 
 class VoiceExtractionResult(BaseModel):
     intent: str = Field(
         default="record_sale",
-        description="record_sale, check_payment_status, query_pending, query_daily, general_qa"
+        description="record_sale, add_to_catalog, check_payment_status, query_pending, query_daily, general_qa"
     )
     product_name: Optional[str] = Field(default=None, description="Product filter for payment status queries")
     sale_id: Optional[str] = Field(default=None, description="Sale ID if mentioned")

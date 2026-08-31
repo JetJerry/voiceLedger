@@ -8,30 +8,41 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "VoiceLedger"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
-    
+
     # Environment
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
-    
+
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "%(asctime)s %(levelname)s %(name)s %(message)s"
+
     # Database
     DATABASE_URL: str = "sqlite:///./voiceledger.db"
-    
+
     # Razorpay API Credentials
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
-    
+
     # AI / LLM Configuration
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     LLM_PROVIDER: str = "gemini"  # gemini, openai, or mock
     LLM_MODEL: str = "gemini-2.5-flash"
     
+    # HuggingFace Model Configuration
+    WHISPER_MODEL_SIZE: str = "small"       # tiny, small, medium, large-v3
+    WHISPER_DEVICE: str = "cpu"             # cpu or cuda
+    WHISPER_COMPUTE_TYPE: str = "int8"      # int8 (CPU), float16 (GPU)
+    HF_TTS_MODEL: str = "facebook/mms-tts-hin"  # HuggingFace TTS model ID
+    LLM_REQUEST_TIMEOUT_SECONDS: int = 30
+
     # Server configuration (127.0.0.1 for local browser compatibility on Windows)
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     CORS_ORIGINS: List[str] = ["*"]
-    
+
     # Default Merchant Context
     DEFAULT_MERCHANT_NAME: str = "Kirana Store & Cafe"
 

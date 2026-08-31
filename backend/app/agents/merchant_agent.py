@@ -121,7 +121,51 @@ class MerchantAgent:
                 action_taken="SALE_CREATED"
             )
 
-        # 4. Handle Intent: Query Pending / Collection Summaries
+        # 4. Handle Intent: Add new item(s) to catalog / menu via voice
+        elif intent == "add_to_catalog":
+            added_products = []
+            items_to_add = extraction.items if extraction.items else []
+            if not items_to_add and extraction.product_name:
+                items_to_add = [VoiceItemExtracted(product_name=extraction.product_name, unit_price=0.0)]
+
+            if items_to_add:
+                for it in items_to_add:
+                    prod = sales_service.add_or_update_product(
+                        db=db,
+                        name=it.product_name,
+                        price=it.unit_price or 0.0,
+                        category=it.category or "General"
+                    )
+                    added_products.append(prod)
+
+                summary_str = ", ".join([f"{p.name.title()} (Rs. {p.price:.2f})" for p in added_products])
+                agent_reply = f"Naya item {summary_str} aapke catalog me add ho gaya hai! ✅"
+                spoken_text = f"{summary_str} catalog me add ho gaya hai."
+                audio_base64 = tts_service.generate_speech_base64(spoken_text, lang=request.voice_lang) if request.speak_response else None
+
+                return VoiceProcessResponse(
+                    extraction=extraction,
+                    agent_reply=agent_reply,
+                    audio_base64=audio_base64,
+                    sale={
+                        "catalog_items": [
+                            {"id": p.id, "name": p.name, "price": p.price, "category": p.category}
+                            for p in added_products
+                        ]
+                    },
+                    action_taken="CATALOG_ITEM_ADDED"
+                )
+            else:
+                agent_reply = "Item ka naam samajh nahi aaya. Kripya bolein: 'Menu mein burger add karo 100 rupaye'."
+                audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
+                return VoiceProcessResponse(
+                    extraction=extraction,
+                    agent_reply=agent_reply,
+                    audio_base64=audio_base64,
+                    action_taken="CATALOG_ADD_FAILED"
+                )
+
+        # 5. Handle Intent: Query Pending / Collection Summaries
         elif intent in ["query_pending", "query_daily", "general_qa"]:
             metrics = self._get_summary_metrics(db)
             agent_reply = llm_service.answer_query(request.text, metrics)

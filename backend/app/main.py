@@ -1,7 +1,9 @@
+import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -16,13 +18,22 @@ from backend.app.api.recovery import router as recovery_router
 from backend.app.api.dashboard import router as dashboard_router
 
 
+logger = logging.getLogger("voiceledger")
+logger.setLevel(getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO))
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(settings.LOG_FORMAT))
+    logger.addHandler(handler)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB & Seed Data on Startup
     try:
         init_db()
+        logger.info("Database initialization completed")
     except Exception as e:
-        print(f"Startup DB init error: {e}")
+        logger.exception("Startup DB init error: %s", e)
     yield
 
 
@@ -32,6 +43,27 @@ app = FastAPI(
     description="VoiceLedger: AI Voice-First Payment Collection & Revenue Recovery Agent with Razorpay",
     lifespan=lifespan
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.perf_counter()
+    try:
+        response = await call_next(request)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "%s %s -> %s in %.2fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+        )
+        return response
+    except Exception:
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.exception("Unhandled request error for %s %s after %.2fms", request.method, request.url.path, duration_ms)
+        raise
+
 
 # CORS Middleware
 app.add_middleware(
@@ -59,7 +91,13 @@ def health_check():
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
         "razorpay_configured": settings.RAZORPAY_KEY_ID != "",
-        "gemini_configured": settings.GEMINI_API_KEY != ""
+        "gemini_configured": settings.GEMINI_API_KEY != "",
+        "huggingface_models": {
+            "stt_model": f"openai/whisper-{settings.WHISPER_MODEL_SIZE}",
+            "stt_device": settings.WHISPER_DEVICE,
+            "stt_compute_type": settings.WHISPER_COMPUTE_TYPE,
+            "tts_model": settings.HF_TTS_MODEL,
+        }
     }
 
 

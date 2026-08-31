@@ -7,9 +7,36 @@ from backend.app.db.session import engine, SessionLocal
 from backend.app.models import Merchant, Customer, Product, Sale, SaleItem, Payment, WebhookEvent, RecoveryAction
 
 
+from sqlalchemy import text
+
+
+def _migrate_tables(bind_engine):
+    """Auto-migrate existing SQLite tables to add missing columns."""
+    with bind_engine.connect() as conn:
+        try:
+            # Check existing columns in products table
+            result = conn.execute(text("PRAGMA table_info(products);")).fetchall()
+            existing_cols = {row[1] for row in result}  # row[1] is column name
+            
+            if existing_cols:
+                if "description" not in existing_cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN description TEXT;"))
+                if "unit" not in existing_cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN unit VARCHAR(50);"))
+                if "is_active" not in existing_cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN is_active BOOLEAN DEFAULT 1 NOT NULL;"))
+                if "updated_at" not in existing_cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN updated_at DATETIME;"))
+                conn.commit()
+        except Exception as e:
+            # Non-sqlite or other DB engine
+            pass
+
+
 def init_db(db: Session = None) -> None:
     # Create all tables
     Base.metadata.create_all(bind=engine)
+    _migrate_tables(engine)
     
     close_db = False
     if db is None:
@@ -40,7 +67,9 @@ def init_db(db: Session = None) -> None:
                     merchant_id=merchant.id,
                     name=p["name"].strip().lower(),
                     price=float(p["price"]),
-                    category=p.get("category", "General")
+                    category=p.get("category", "General"),
+                    unit=p.get("unit"),
+                    description=p.get("description"),
                 )
                 db.add(prod)
                 

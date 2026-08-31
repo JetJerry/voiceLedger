@@ -1,3 +1,10 @@
+"""
+Voice Service — Orchestrates Speech-to-Text processing.
+
+STT Provider Cascade:
+1. PRIMARY:   HuggingFace faster-whisper (openai/whisper-small, local model)
+2. FALLBACK:  Google Gemini multimodal audio (cloud API)
+"""
 import io
 from typing import Optional, List
 from backend.app.config import settings
@@ -7,7 +14,21 @@ from backend.app.schemas.voice import VoiceExtractionResult
 
 class VoiceService:
     def __init__(self):
-        pass
+        self._hf_stt = None
+        self._hf_available = None  # None = not checked yet
+
+    def _get_hf_stt(self):
+        """Lazy-load the HuggingFace STT service."""
+        if self._hf_available is None:
+            try:
+                from backend.app.services.hf_stt_service import hf_stt_service
+                self._hf_stt = hf_stt_service
+                self._hf_available = True
+                print("[Voice] HuggingFace Whisper STT available as primary STT.")
+            except Exception as e:
+                print(f"[Voice] HuggingFace STT not available, will use Gemini: {e}")
+                self._hf_available = False
+        return self._hf_stt if self._hf_available else None
 
     def process_text_input(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
         """
@@ -17,8 +38,33 @@ class VoiceService:
 
     def process_audio_bytes(self, audio_bytes: bytes, mime_type: str = "audio/webm", catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
         """
-        Processes raw audio bytes using Gemini multimodal audio model if available.
+        Processes raw audio bytes using HuggingFace Whisper STT (primary)
+        or Gemini multimodal (fallback).
+        
+        STT cascade: faster-whisper → Gemini multimodal → default fallback
         """
+        # 1. PRIMARY: HuggingFace faster-whisper (local Whisper model)
+        hf_stt = self._get_hf_stt()
+        if hf_stt:
+            try:
+                transcribed_text, lang_prob, detected_lang = hf_stt.transcribe_audio_bytes(
+                    audio_bytes, mime_type=mime_type, language="hi"
+                )
+                
+                if transcribed_text and transcribed_text.strip():
+                    print(f"[Voice] Whisper STT transcription: '{transcribed_text}' "
+                          f"(lang={detected_lang}, prob={lang_prob:.2f})")
+                    
+                    # Forward transcribed text to LLM for intent extraction
+                    return llm_service.extract_transaction(
+                        transcribed_text, catalog_items=catalog_items
+                    )
+                else:
+                    print("[Voice] Whisper STT returned empty transcription, trying Gemini...")
+            except Exception as e:
+                print(f"[Voice] Whisper STT failed, falling back to Gemini: {e}")
+
+        # 2. FALLBACK: Gemini multimodal audio processing
         if llm_service.client:
             try:
                 from google.genai import types
@@ -70,16 +116,15 @@ Extract the merchant's sale details or intent and output ONLY valid JSON matchin
                 return VoiceExtractionResult(
                     intent=data.get("intent", "record_sale"),
                     customer_name=data.get("customer_name"),
-                    customer_phone=data.get("customer_phone"),
                     items=items,
                     payment_status=data.get("payment_status", "pending"),
                     raw_text=data.get("raw_text", "Audio processed"),
                     explanation=data.get("explanation")
                 )
             except Exception as e:
-                print(f"Audio processing fallback error: {e}")
+                print(f"[Voice] Gemini audio processing also failed: {e}")
 
-        # Fallback default if audio model not configured
+        # 3. Default fallback if nothing worked
         return VoiceExtractionResult(
             intent="record_sale",
             customer_name="Customer",

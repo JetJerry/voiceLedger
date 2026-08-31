@@ -1,22 +1,108 @@
 {
   "merchant": {
     "name": "Kirana & Cafe Express",
-    "currency": "INR"
+    "currency": "INR",
+    "business_type": "Retail & Food"
   },
   "products": [
-    {"name": "burger", "price": 100.0, "category": "Fast Food"},
-    {"name": "cheese burger", "price": 150.0, "category": "Fast Food"},
-    {"name": "veg pizza", "price": 250.0, "category": "Pizza"},
-    {"name": "pizza", "price": 300.0, "category": "Pizza"},
-    {"name": "coke", "price": 40.0, "category": "Beverages"},
-    {"name": "cold drink", "price": 40.0, "category": "Beverages"},
-    {"name": "tea", "price": 20.0, "category": "Beverages"},
-    {"name": "chai", "price": 20.0, "category": "Beverages"},
-    {"name": "coffee", "price": 50.0, "category": "Beverages"},
-    {"name": "veg thali", "price": 180.0, "category": "Meals"},
-    {"name": "paneer roll", "price": 120.0, "category": "Snacks"},
-    {"name": "samosa", "price": 25.0, "category": "Snacks"},
-    {"name": "sandwich", "price": 80.0, "category": "Snacks"}
+    {
+      "name": "chai",
+      "price": 20.0,
+      "category": "Beverages",
+      "unit": "cup",
+      "description": "Special hot masala tea"
+    },
+    {
+      "name": "coffee",
+      "price": 50.0,
+      "category": "Beverages",
+      "unit": "cup",
+      "description": "Fresh brewed hot coffee"
+    },
+    {
+      "name": "samosa",
+      "price": 25.0,
+      "category": "Snacks",
+      "unit": "piece",
+      "description": "Crispy aloo samosa"
+    },
+    {
+      "name": "sandwich",
+      "price": 80.0,
+      "category": "Snacks",
+      "unit": "piece",
+      "description": "Veg grilled sandwich"
+    },
+    {
+      "name": "burger",
+      "price": 100.0,
+      "category": "Fast Food",
+      "unit": "piece",
+      "description": "Veg burger with cheese"
+    },
+    {
+      "name": "veg pizza",
+      "price": 250.0,
+      "category": "Fast Food",
+      "unit": "piece",
+      "description": "7 inch regular veg pizza"
+    },
+    {
+      "name": "pizza",
+      "price": 300.0,
+      "category": "Fast Food",
+      "unit": "piece",
+      "description": "Special loaded cheese pizza"
+    },
+    {
+      "name": "atta",
+      "price": 380.0,
+      "category": "Kirana & Grocery",
+      "unit": "10 kg bag",
+      "description": "Fresh whole wheat flour"
+    },
+    {
+      "name": "mustard oil",
+      "price": 160.0,
+      "category": "Kirana & Grocery",
+      "unit": "1 litre bottle",
+      "description": "Pure kachi ghani mustard oil"
+    },
+    {
+      "name": "sugar",
+      "price": 45.0,
+      "category": "Kirana & Grocery",
+      "unit": "1 kg packet",
+      "description": "Refined white crystal sugar"
+    },
+    {
+      "name": "milk",
+      "price": 33.0,
+      "category": "Dairy",
+      "unit": "500ml pouch",
+      "description": "Toned pasteurized fresh milk"
+    },
+    {
+      "name": "paneer",
+      "price": 90.0,
+      "category": "Dairy",
+      "unit": "200g pack",
+      "description": "Fresh malai paneer"
+    },
+    {
+      "name": "notebook",
+      "price": 50.0,
+      "category": "Stationery",
+      "unit": "piece",
+      "description": "172 pages single line copy"
+    },
+    {
+      "name": "ball pen",
+      "price": 10.0,
+      "category": "Stationery",
+      "unit": "piece",
+      "description": "Blue ink ball point pen"
+    }
   ],
   "customers": [
     {"name": "Rahul", "phone": "+919876543210"},

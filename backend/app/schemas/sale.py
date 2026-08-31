@@ -51,18 +51,31 @@ class SaleResponse(BaseModel):
 
 
 class ProductBase(BaseModel):
-    name: str
-    price: float
-    category: Optional[str] = "General"
+    name: str = Field(..., description="Item name — any product, any category (e.g. chai, notebook, hammer, shirt)")
+    price: float = Field(default=0.0, description="Price per unit in INR")
+    category: Optional[str] = Field(default="General", description="Free-form category (e.g. Snacks, Beverages, Stationery, Hardware)")
+    description: Optional[str] = Field(default=None, description="Optional item description")
+    unit: Optional[str] = Field(default=None, description="Unit of measure (e.g. kg, piece, plate, glass, packet)")
 
 
 class ProductCreate(ProductBase):
     pass
 
 
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    unit: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 class ProductResponse(ProductBase):
     id: int
     merchant_id: int
+    is_active: bool = True
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

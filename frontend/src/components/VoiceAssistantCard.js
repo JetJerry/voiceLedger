@@ -17,6 +17,7 @@ import { apiService } from '../services/apiService';
 
 const SAMPLE_PROMPTS = [
   { label: '🔍 Payment aaya kya?', prompt: 'Payment aaya kya?' },
+  { label: '➕ Menu me Burger (₹100) add karo', prompt: 'Menu mein burger add karo 100 rupaye' },
   { label: '☕ 2 Coffee + Sandwich (₹120)', prompt: '2 coffee aur 1 sandwich 120 rupaye' },
   { label: '📚 3 Notebook (₹150)', prompt: '3 notebook 150 rs' },
   { label: '❓ Kitna pending hai?', prompt: 'Kitna pending hai?' },
