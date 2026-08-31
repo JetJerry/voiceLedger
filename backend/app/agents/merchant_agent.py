@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, date
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from backend.app.models import Product, Sale, Payment
+from backend.app.models import Product, Sale, Payment, MerchantProfile
 from backend.app.schemas.voice import VoiceProcessRequest, VoiceProcessResponse
 from backend.app.schemas.sale import SaleCreate, SaleItemCreate
 from backend.app.services.llm_service import llm_service
@@ -26,7 +26,17 @@ class MerchantAgent:
         catalog_names = [p.name for p in products]
 
         # 1. AI Extraction
-        extraction = llm_service.extract_transaction(request.text, catalog_items=catalog_names)
+        # Fetch merchant profile (if any) and include in LLM context for better, personalized extraction
+        profile_obj = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+        merchant_profile = None
+        if profile_obj:
+            try:
+                import json as _json
+                merchant_profile = _json.loads(profile_obj.config_json or "{}")
+            except Exception:
+                merchant_profile = None
+
+        extraction = llm_service.extract_transaction(request.text, catalog_items=catalog_names, merchant_profile=merchant_profile)
         intent = extraction.intent
 
         # 2. Handle Intent: Check whether payment of the sold product has arrived or not

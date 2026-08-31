@@ -51,11 +51,31 @@ DEVANAGARI_PRODUCT_MAP = {
 class BaseLLMProvider:
     name = "base"
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
+    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
+        """Extract transactional intent from text with optional catalog and merchant profile context."""
         raise NotImplementedError
 
     def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
         raise NotImplementedError
+
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        """Return a lightweight summary of the merchant profile suitable for prompt injection.
+        Default implementation infers modules from keys and item counts.
+        """
+        if not profile:
+            return {"modules": [], "summary": "Empty profile"}
+        modules = []
+        if profile.get("products"):
+            modules.append("catalog")
+        if profile.get("pricing") or profile.get("currency"):
+            modules.append("pricing")
+        if profile.get("payment_methods"):
+            modules.append("payments")
+        if profile.get("loyalty"):
+            modules.append("loyalty")
+        # Heuristic summary
+        summary = f"Merchant has {len(profile.get('products', []))} products" if isinstance(profile.get('products'), list) else "Merchant profile available"
+        return {"modules": modules, "summary": summary}
 
     @staticmethod
     def _strip_markdown_json(raw_text: str) -> str:
@@ -96,17 +116,19 @@ class GeminiLLMProvider(BaseLLMProvider):
             except Exception as exc:
                 logger.warning("Could not initialize Gemini client: %s", exc)
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
+    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
         if not self.client:
             raise RuntimeError("Gemini client not configured")
 
         catalog_prompt = f"Merchant Store Product Catalog: {', '.join(catalog_items)}" if catalog_items else ""
+        profile_prompt = f"Merchant Profile: {json.dumps(merchant_profile, default=str)}" if merchant_profile else ""
         prompt = f"""
 You are VoiceLedger AI, an intelligent financial voice assistant for Indian retail shopkeepers.
 Analyze what the merchant spoke in Hindi, Hinglish, or English:
 "{text}"
 
 {catalog_prompt}
+{profile_prompt}
 
 Classify the intent into one of:
 1. "record_sale" -> Selling catalog/retail items (e.g. "2 chai 40 rs", "1 burger becha")
@@ -171,6 +193,23 @@ Respond with an accurate, friendly answer:
             logger.warning("Gemini answer generation failed: %s", exc)
             raise
 
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        # Use a short prompt to summarize the merchant profile if client present
+        if not self.client or not profile:
+            return super().summarize_profile(profile)
+        prompt = f"Summarize this merchant profile in JSON with modules and a short summary: {json.dumps(profile, default=str)}"
+        try:
+            resp = self.client.models.generate_content(model=settings.LLM_MODEL, contents=prompt)
+            txt = self._strip_markdown_json(resp.text or "")
+            try:
+                parsed = json.loads(txt)
+                return parsed
+            except Exception:
+                return {"modules": [], "summary": txt}
+        except Exception as exc:
+            logger.warning("Gemini summarize_profile failed: %s", exc)
+            return super().summarize_profile(profile)
+
 
 class OpenAIProvider(BaseLLMProvider):
     name = "openai"
@@ -184,14 +223,16 @@ class OpenAIProvider(BaseLLMProvider):
             except Exception as exc:
                 logger.warning("Could not initialize OpenAI client: %s", exc)
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
+    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
         if not self.client:
             raise RuntimeError("OpenAI client not configured")
 
         catalog_prompt = f"Merchant product catalog: {', '.join(catalog_items)}" if catalog_items else ""
+        profile_prompt = f"Merchant Profile: {json.dumps(merchant_profile, default=str)}" if merchant_profile else ""
         prompt = f"""
 You are VoiceLedger AI. Extract merchant intent from: "{text}".
 {catalog_prompt}
+{profile_prompt}
 Output JSON with: intent, product_name, items, payment_status, explanation.
 """
         try:
@@ -230,6 +271,25 @@ Output JSON with: intent, product_name, items, payment_status, explanation.
             logger.warning("OpenAI answer generation failed: %s", exc)
             raise
 
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        if not self.client or not profile:
+            return super().summarize_profile(profile)
+        prompt = f"Summarize this merchant profile in JSON with modules and a short summary: {json.dumps(profile, default=str)}"
+        try:
+            response = self.client.responses.create(
+                model=settings.LLM_MODEL,
+                input=prompt,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            )
+            txt = self._strip_markdown_json(response.output_text or "")
+            try:
+                return json.loads(txt)
+            except Exception:
+                return {"modules": [], "summary": txt}
+        except Exception as exc:
+            logger.warning("OpenAI summarize_profile failed: %s", exc)
+            return super().summarize_profile(profile)
+
 
 class MockLLMProvider(BaseLLMProvider):
     name = "mock"
@@ -237,7 +297,7 @@ class MockLLMProvider(BaseLLMProvider):
     def __init__(self):
         self.client = None
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
+    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
         return VoiceExtractionResult(
             intent="general_qa",
             raw_text=text,
@@ -248,6 +308,9 @@ class MockLLMProvider(BaseLLMProvider):
 
     def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
         return "VoiceLedger AI active."
+
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        return super().summarize_profile(profile)
 
 
 class LLMService:
@@ -270,7 +333,7 @@ class LLMService:
 
         self.client = getattr(self.provider, "client", None)
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
+    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
         text_clean = text.strip()
         if not text_clean:
             return VoiceExtractionResult(
@@ -280,10 +343,10 @@ class LLMService:
             )
 
         try:
-            return self.provider.extract_transaction(text_clean, catalog_items)
+            return self.provider.extract_transaction(text_clean, catalog_items, merchant_profile)
         except Exception as exc:
             # High-Accuracy Dynamic Conversational Intent Engine
-            return self._dynamic_parse(text_clean, catalog_items or [])
+            return self._dynamic_parse(text_clean, catalog_items or [], merchant_profile)
 
     def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
         try:
@@ -291,7 +354,7 @@ class LLMService:
         except Exception as exc:
             return self._answer_from_context(query, context_data)
 
-    def _dynamic_parse(self, text: str, catalog_items: List[str]) -> VoiceExtractionResult:
+    def _dynamic_parse(self, text: str, catalog_items: List[str], merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
         """
         High-Accuracy Rule-Based & Semantic NLP Engine for Hindi / Hinglish.
         Accurately separates Status Queries, Add-to-Catalog, Pending Balances, Greetings, and Sales.

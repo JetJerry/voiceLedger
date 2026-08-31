@@ -1,12 +1,15 @@
 import json
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Merchant, Sale, Product
-from backend.app.schemas.merchant import MerchantCreate, MerchantResponse
+from backend.app.models import Merchant, Sale, Product, MerchantProfile
+from backend.app.schemas.merchant import MerchantCreate, MerchantResponse, MerchantProfileCreate, MerchantProfileResponse
 from backend.app.schemas.sale import SaleCreate, SaleResponse, ProductCreate, ProductUpdate, ProductResponse
 from backend.app.services.sales_service import sales_service
+from backend.app.services.llm_service import llm_service
+from fastapi import Body
+
 
 router = APIRouter(prefix="/sales", tags=["Sales & Catalog"])
 
@@ -21,12 +24,17 @@ def get_merchant(db: Session = Depends(get_db)):
 @router.post("/catalog/merchant", response_model=MerchantResponse)
 def create_merchant(merchant_in: MerchantCreate, db: Session = Depends(get_db)):
     """Create a merchant record and catalog context for onboarding."""
-    # Deactivate existing active flags
-    db.query(Merchant).update({Merchant.is_current_active: False})
+    # Deactivate existing active flags if present
+    try:
+        db.query(Merchant).update({Merchant.is_current_active: False})
+    except Exception:
+        pass
 
     merchant = db.query(Merchant).filter(Merchant.name == merchant_in.name.strip()).first()
     if merchant:
+        # Ensure merchant is active/current
         merchant.is_current_active = True
+        merchant.is_active = True
         db.commit()
         db.refresh(merchant)
         return merchant
@@ -41,6 +49,65 @@ def create_merchant(merchant_in: MerchantCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(merchant)
     return merchant
+
+
+@router.get("/catalog/merchant/profile", response_model=MerchantProfileResponse)
+def get_merchant_profile(db: Session = Depends(get_db)):
+    """Get the merchant's dynamic business profile (JSON configuration)."""
+    merchant = sales_service.get_or_create_merchant(db)
+
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        return {
+            "id": 0,
+            "merchant_id": merchant.id,
+            "config": {},
+            "created_at": merchant.created_at,
+            "updated_at": merchant.created_at,
+        }
+
+    try:
+        cfg = json.loads(profile.config_json)
+    except Exception:
+        cfg = {}
+
+    return {
+        "id": profile.id,
+        "merchant_id": profile.merchant_id,
+        "config": cfg,
+        "created_at": profile.created_at,
+        "updated_at": profile.updated_at,
+    }
+
+
+@router.post("/catalog/merchant/profile", response_model=MerchantProfileResponse)
+def upsert_merchant_profile(profile_in: MerchantProfileCreate, db: Session = Depends(get_db)):
+    """Create or update merchant dynamic profile.
+
+    Stores merchant-specific configuration used as context for the AI and frontend.
+    """
+    merchant = sales_service.get_or_create_merchant(db)
+    cfg_text = json.dumps(profile_in.config or {})
+
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        profile = MerchantProfile(merchant_id=merchant.id, config_json=cfg_text)
+        db.add(profile)
+    else:
+        profile.config_json = cfg_text
+        from datetime import datetime, timezone
+        profile.updated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(profile)
+
+    return {
+        "id": profile.id,
+        "merchant_id": profile.merchant_id,
+        "config": profile_in.config,
+        "created_at": profile.created_at,
+        "updated_at": profile.updated_at,
+    }
 
 
 @router.post("", response_model=SaleResponse)
@@ -101,6 +168,58 @@ def list_catalog_products(
 
     products = query.order_by(Product.category, Product.name).all()
     return products
+
+
+@router.post("/catalog/merchant/profile/preview")
+def preview_merchant_profile(profile_in: MerchantProfileCreate = Body(...), db: Session = Depends(get_db)):
+    """LLM-driven profile preview / validation.
+
+    Accepts a proposed profile (JSON) and returns a suggested modules list and short summary as produced by the configured LLM provider.
+    """
+    profile = profile_in.config or {}
+    summary = llm_service.provider.summarize_profile(profile)
+    # Ensure a stable structure
+    return {"preview": summary}
+
+
+@router.get("/admin/merchant/{merchant_id}/profile/export")
+def export_merchant_profile(merchant_id: int, db: Session = Depends(get_db)):
+    """Export merchant profile JSON for admin/backup purposes."""
+    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        return {"merchant_id": merchant.id, "config": {}}
+    try:
+        cfg = json.loads(profile.config_json)
+    except Exception:
+        cfg = {}
+    return {"merchant_id": merchant.id, "config": cfg}
+
+
+@router.post("/admin/merchant/{merchant_id}/profile/import")
+def import_merchant_profile(merchant_id: int, profile_json: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
+    """Import / upsert merchant profile JSON for admin usage."""
+    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    cfg_text = json.dumps(profile_json or {})
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        profile = MerchantProfile(merchant_id=merchant.id, config_json=cfg_text)
+        db.add(profile)
+    else:
+        profile.config_json = cfg_text
+        from datetime import datetime, timezone
+        profile.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(profile)
+    try:
+        parsed = json.loads(profile.config_json)
+    except Exception:
+        parsed = {}
+    return {"merchant_id": merchant.id, "config": parsed}
 
 
 @router.post("/catalog/products", response_model=ProductResponse)
