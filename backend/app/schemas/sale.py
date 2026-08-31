@@ -1,6 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+import json
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SaleItemBase(BaseModel):
@@ -48,11 +49,6 @@ class SaleResponse(BaseModel):
     items: List[SaleItemResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
-
-
-from typing import List, Optional, Dict, Any
-import json
-from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProductBase(BaseModel):

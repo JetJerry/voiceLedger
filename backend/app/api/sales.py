@@ -1,30 +1,41 @@
 import json
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.models import Merchant, Sale, Product, MerchantProfile
-from backend.app.schemas.merchant import MerchantCreate, MerchantResponse, MerchantProfileCreate, MerchantProfileResponse
-from backend.app.schemas.sale import SaleCreate, SaleResponse, ProductCreate, ProductUpdate, ProductResponse
+from backend.app.schemas.merchant import (
+    MerchantCreate,
+    MerchantResponse,
+    MerchantProfileCreate,
+    MerchantProfileResponse,
+)
+from backend.app.schemas.sale import (
+    SaleCreate,
+    SaleResponse,
+    ProductCreate,
+    ProductUpdate,
+    ProductResponse,
+)
 from backend.app.services.sales_service import sales_service
 from backend.app.services.llm_service import llm_service
-from fastapi import Body
-
+from backend.app.services.analytics_service import analytics_service
 
 router = APIRouter(prefix="/sales", tags=["Sales & Catalog"])
 
 
+# ── 1. Merchant & Profile Endpoints ─────────────────────────────────
+
 @router.get("/catalog/merchant", response_model=MerchantResponse)
 def get_merchant(db: Session = Depends(get_db)):
     """Return the currently active merchant profile for the catalog."""
-    merchant = sales_service.get_or_create_merchant(db)
-    return merchant
+    return sales_service.get_or_create_merchant(db)
 
 
 @router.post("/catalog/merchant", response_model=MerchantResponse)
 def create_merchant(merchant_in: MerchantCreate, db: Session = Depends(get_db)):
     """Create a merchant record and catalog context for onboarding."""
-    # Deactivate existing active flags if present
     try:
         db.query(Merchant).update({Merchant.is_current_active: False})
     except Exception:
@@ -32,7 +43,6 @@ def create_merchant(merchant_in: MerchantCreate, db: Session = Depends(get_db)):
 
     merchant = db.query(Merchant).filter(Merchant.name == merchant_in.name.strip()).first()
     if merchant:
-        # Ensure merchant is active/current
         merchant.is_current_active = True
         merchant.is_active = True
         db.commit()
@@ -55,7 +65,6 @@ def create_merchant(merchant_in: MerchantCreate, db: Session = Depends(get_db)):
 def get_merchant_profile(db: Session = Depends(get_db)):
     """Get the merchant's dynamic business profile (JSON configuration)."""
     merchant = sales_service.get_or_create_merchant(db)
-
     profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
     if not profile:
         return {
@@ -82,10 +91,7 @@ def get_merchant_profile(db: Session = Depends(get_db)):
 
 @router.post("/catalog/merchant/profile", response_model=MerchantProfileResponse)
 def upsert_merchant_profile(profile_in: MerchantProfileCreate, db: Session = Depends(get_db)):
-    """Create or update merchant dynamic profile.
-
-    Stores merchant-specific configuration used as context for the AI and frontend.
-    """
+    """Create or update merchant dynamic profile configuration."""
     merchant = sales_service.get_or_create_merchant(db)
     cfg_text = json.dumps(profile_in.config or {})
 
@@ -95,7 +101,6 @@ def upsert_merchant_profile(profile_in: MerchantProfileCreate, db: Session = Dep
         db.add(profile)
     else:
         profile.config_json = cfg_text
-        from datetime import datetime, timezone
         profile.updated_at = datetime.now(timezone.utc)
 
     db.commit()
@@ -110,34 +115,119 @@ def upsert_merchant_profile(profile_in: MerchantProfileCreate, db: Session = Dep
     }
 
 
+@router.post("/catalog/merchant/profile/preview")
+def preview_merchant_profile(profile_in: MerchantProfileCreate = Body(...), db: Session = Depends(get_db)):
+    """LLM-driven profile preview / validation."""
+    profile = profile_in.config or {}
+    summary = llm_service.provider.summarize_profile(profile)
+    return {"preview": summary}
+
+
+@router.get("/admin/merchant/{merchant_id}/profile/export")
+def export_merchant_profile(merchant_id: int, db: Session = Depends(get_db)):
+    """Export merchant profile JSON for backup."""
+    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        return {"merchant_id": merchant.id, "config": {}}
+    try:
+        cfg = json.loads(profile.config_json)
+    except Exception:
+        cfg = {}
+    return {"merchant_id": merchant.id, "config": cfg}
+
+
+@router.post("/admin/merchant/{merchant_id}/profile/import")
+def import_merchant_profile(merchant_id: int, profile_json: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
+    """Import merchant profile JSON."""
+    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail="Merchant not found")
+    cfg_text = json.dumps(profile_json or {})
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    if not profile:
+        profile = MerchantProfile(merchant_id=merchant.id, config_json=cfg_text)
+        db.add(profile)
+    else:
+        profile.config_json = cfg_text
+        profile.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(profile)
+    try:
+        parsed = json.loads(profile.config_json)
+    except Exception:
+        parsed = {}
+    return {"merchant_id": merchant.id, "config": parsed}
+
+
+# ── 2. Sales & Orders Endpoints ──────────────────────────────────────
+
 @router.post("", response_model=SaleResponse)
 def create_sale(sale_in: SaleCreate, db: Session = Depends(get_db)):
-    """
-    Creates a new sale and automatically creates a Razorpay payment link.
-    """
-    sale = sales_service.create_sale(db, sale_in)
-    return sale
+    """Creates a new sale and automatically creates a Razorpay payment link."""
+    return sales_service.create_sale(db, sale_in)
 
 
 @router.get("", response_model=List[SaleResponse])
 def list_sales(limit: int = 50, db: Session = Depends(get_db)):
-    """
-    List all recent sales.
-    """
-    sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(limit).all()
+    """List recent sales for the active merchant."""
+    merchant = sales_service.get_or_create_merchant(db)
+    sales = db.query(Sale).filter(Sale.merchant_id == merchant.id).order_by(Sale.created_at.desc()).limit(limit).all()
     return sales
 
 
 @router.get("/{sale_id}", response_model=SaleResponse)
 def get_sale(sale_id: str, db: Session = Depends(get_db)):
-    """
-    Get detailed sale information by ID.
-    """
+    """Get detailed sale information by ID."""
     sale = sales_service.get_sale_by_id(db, sale_id)
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
     return sale
 
+
+# ── 3. Sales Analytics & Excel Export Endpoints ─────────────────────
+
+@router.get("/analytics/summary")
+def get_sales_analytics_summary(
+    merchant_id: Optional[int] = Query(None, description="Optional merchant ID filter"),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns segmented sales analytics (Today / Week / Month / All-Time)
+    and product catalog performance metrics for shopkeeper review.
+    """
+    return analytics_service.get_period_sales_analytics(db, merchant_id=merchant_id)
+
+
+@router.get("/analytics/export/excel")
+def export_sales_excel_report(
+    merchant_id: Optional[int] = Query(None, description="Optional merchant ID filter"),
+    db: Session = Depends(get_db),
+):
+    """
+    Generates and downloads a multi-sheet, beautifully styled Excel (.xlsx) report containing:
+    1. Executive Sales Analytics (Day / Week / Month)
+    2. Complete Product Catalog & Sales Volume
+    3. Detailed Sales Transactions & Payment Status Ledger
+    """
+    excel_bytes = analytics_service.generate_excel_report(db, merchant_id=merchant_id)
+    
+    # Filename
+    merchant = sales_service.get_or_create_merchant(db)
+    clean_name = (merchant.name or "Store").replace(" ", "_").replace("&", "and")
+    date_str = datetime.now().strftime("%Y%m%d_%H%M")
+    filename = f"VoiceLedger_Sales_Report_{clean_name}_{date_str}.xlsx"
+
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
+
+
+# ── 4. Catalog & Products Endpoints ──────────────────────────────────
 
 @router.get("/catalog/products", response_model=List[ProductResponse])
 def list_catalog_products(
@@ -147,9 +237,7 @@ def list_catalog_products(
     search: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    """
-    List all catalog items. Supports open/dynamic schema for any store domain.
-    """
+    """List catalog items. Supports open dynamic schema for any domain."""
     query = db.query(Product)
     if merchant_id:
         query = query.filter(Product.merchant_id == merchant_id)
@@ -166,72 +254,15 @@ def list_catalog_products(
         s = f"%{search.strip().lower()}%"
         query = query.filter((Product.name.ilike(s)) | (Product.category.ilike(s)) | (Product.description.ilike(s)))
 
-    products = query.order_by(Product.category, Product.name).all()
-    return products
-
-
-@router.post("/catalog/merchant/profile/preview")
-def preview_merchant_profile(profile_in: MerchantProfileCreate = Body(...), db: Session = Depends(get_db)):
-    """LLM-driven profile preview / validation.
-
-    Accepts a proposed profile (JSON) and returns a suggested modules list and short summary as produced by the configured LLM provider.
-    """
-    profile = profile_in.config or {}
-    summary = llm_service.provider.summarize_profile(profile)
-    # Ensure a stable structure
-    return {"preview": summary}
-
-
-@router.get("/admin/merchant/{merchant_id}/profile/export")
-def export_merchant_profile(merchant_id: int, db: Session = Depends(get_db)):
-    """Export merchant profile JSON for admin/backup purposes."""
-    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-    if not merchant:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
-    if not profile:
-        return {"merchant_id": merchant.id, "config": {}}
-    try:
-        cfg = json.loads(profile.config_json)
-    except Exception:
-        cfg = {}
-    return {"merchant_id": merchant.id, "config": cfg}
-
-
-@router.post("/admin/merchant/{merchant_id}/profile/import")
-def import_merchant_profile(merchant_id: int, profile_json: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
-    """Import / upsert merchant profile JSON for admin usage."""
-    merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-    if not merchant:
-        raise HTTPException(status_code=404, detail="Merchant not found")
-    cfg_text = json.dumps(profile_json or {})
-    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
-    if not profile:
-        profile = MerchantProfile(merchant_id=merchant.id, config_json=cfg_text)
-        db.add(profile)
-    else:
-        profile.config_json = cfg_text
-        from datetime import datetime, timezone
-        profile.updated_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(profile)
-    try:
-        parsed = json.loads(profile.config_json)
-    except Exception:
-        parsed = {}
-    return {"merchant_id": merchant.id, "config": parsed}
+    return query.order_by(Product.category, Product.name).all()
 
 
 @router.post("/catalog/products", response_model=ProductResponse)
 def add_catalog_product(product_in: ProductCreate, db: Session = Depends(get_db)):
-    """
-    Add ANY new item to the shopkeeper's catalog with dynamic open schema.
-    Works for fruits, vegetables, pharmacy, grocery, cafe, hardware, clothing, etc.
-    """
+    """Add ANY new item to the shopkeeper's catalog with open dynamic attributes."""
     merchant = sales_service.get_or_create_merchant(db)
     attrs_str = json.dumps(product_in.attributes or {})
 
-    # Check if item already exists (by name, case-insensitive)
     existing = db.query(Product).filter(
         Product.merchant_id == merchant.id,
         Product.name == product_in.name.strip().lower()
@@ -264,9 +295,7 @@ def add_catalog_product(product_in: ProductCreate, db: Session = Depends(get_db)
 
 @router.post("/catalog/products/bulk", response_model=List[ProductResponse])
 def add_bulk_products(products: List[ProductCreate], db: Session = Depends(get_db)):
-    """
-    Add multiple items to the catalog at once.
-    """
+    """Add multiple items to the catalog at once."""
     merchant = sales_service.get_or_create_merchant(db)
     results = []
     for p in products:
@@ -301,9 +330,7 @@ def add_bulk_products(products: List[ProductCreate], db: Session = Depends(get_d
 
 @router.put("/catalog/products/{product_id}", response_model=ProductResponse)
 def update_catalog_product(product_id: int, update: ProductUpdate, db: Session = Depends(get_db)):
-    """
-    Update an existing catalog item (price, name, category, dynamic attributes, etc.).
-    """
+    """Update an existing catalog item (price, name, category, dynamic attributes)."""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -323,9 +350,7 @@ def update_catalog_product(product_id: int, update: ProductUpdate, db: Session =
 
 @router.delete("/catalog/products/{product_id}")
 def delete_catalog_product(product_id: int, db: Session = Depends(get_db)):
-    """
-    Soft-delete (deactivate) a catalog item. The item stays in DB for sale history.
-    """
+    """Soft-delete (deactivate) a catalog item."""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -333,4 +358,3 @@ def delete_catalog_product(product_id: int, db: Session = Depends(get_db)):
     product.is_active = False
     db.commit()
     return {"detail": f"Product '{product.name}' deactivated", "id": product.id}
-

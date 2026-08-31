@@ -43,8 +43,6 @@ class Settings(BaseSettings):
     PORT: int = 8000
     CORS_ORIGINS: List[str] = ["*"]
 
-    # Default Merchant Context
-    DEFAULT_MERCHANT_NAME: str = "Kirana Store & Cafe"
 
     model_config = SettingsConfigDict(
         env_file=".env",

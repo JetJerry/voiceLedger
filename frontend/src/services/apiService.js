@@ -119,6 +119,29 @@ export const apiService = {
     return await res.json();
   },
 
+  // ── Sales Analytics & Excel Export APIs ───────────────────────────
+  async getSalesAnalytics(merchantId = null) {
+    const base = getApiBase();
+    let url = `${base}/sales/analytics/summary`;
+    if (merchantId) {
+      url += `?merchant_id=${merchantId}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch sales analytics: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  getExportExcelUrl(merchantId = null) {
+    const base = getApiBase();
+    let url = `${base}/sales/analytics/export/excel`;
+    if (merchantId) {
+      url += `?merchant_id=${merchantId}`;
+    }
+    return url;
+  },
+
   // ── Admin Multi-Merchant Hub APIs ─────────────────────────────────
   async getAdminMetrics() {
     const base = getApiBase();

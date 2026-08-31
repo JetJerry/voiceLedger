@@ -107,16 +107,6 @@ class TTSService:
         except Exception as e:
             print(f"[TTS] gTTS notice: {e}")
 
-        # 3. FALLBACK: Local HuggingFace MMS-TTS
-        if lang.startswith("hi"):
-            try:
-                from backend.app.services.hf_tts_service import hf_tts_service
-                audio_bytes = hf_tts_service.generate_speech(spoken_text)
-                if audio_bytes:
-                    return audio_bytes
-            except Exception as e:
-                print(f"[TTS] Local TTS notice: {e}")
-
         return b""
 
     def generate_speech(self, text: str, lang: str = "hi", voice: Optional[str] = None) -> bytes:
