@@ -1,24 +1,37 @@
+from typing import Optional
 from datetime import datetime, date
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Sale
+from backend.app.models import Sale, Merchant
 from backend.app.schemas.dashboard import DashboardSummary
 from backend.app.schemas.sale import SaleResponse
 from backend.app.services.recovery_service import recovery_service
+from backend.app.services.sales_service import sales_service
 
 router = APIRouter(prefix="/dashboard", tags=["Merchant Dashboard"])
 
 
 @router.get("/summary", response_model=DashboardSummary)
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(
+    merchant_id: Optional[int] = Query(None, description="Optional merchant filter"),
+    db: Session = Depends(get_db)
+):
     """
     Returns comprehensive metrics for the Merchant Dashboard.
     """
     today_start = datetime.combine(date.today(), datetime.min.time())
     
-    # All sales
-    all_sales = db.query(Sale).order_by(Sale.created_at.desc()).all()
+    # Filter by merchant if specified or get active merchant
+    query = db.query(Sale)
+    if merchant_id:
+        query = query.filter(Sale.merchant_id == merchant_id)
+    else:
+        active_m = sales_service.get_or_create_merchant(db)
+        if active_m:
+            query = query.filter(Sale.merchant_id == active_m.id)
+
+    all_sales = query.order_by(Sale.created_at.desc()).all()
     
     # Today's sales
     today_sales_sum = sum(s.total_amount for s in all_sales if s.created_at >= today_start)

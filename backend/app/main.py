@@ -16,6 +16,8 @@ from backend.app.api.payments import router as payments_router
 from backend.app.api.webhooks import router as webhooks_router
 from backend.app.api.recovery import router as recovery_router
 from backend.app.api.dashboard import router as dashboard_router
+from backend.app.api.admin import router as admin_router
+from backend.app.api.auth import router as auth_router
 
 
 logger = logging.getLogger("voiceledger")
@@ -81,6 +83,8 @@ app.include_router(payments_router, prefix=settings.API_V1_STR)
 app.include_router(webhooks_router, prefix=settings.API_V1_STR)
 app.include_router(recovery_router, prefix=settings.API_V1_STR)
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
+app.include_router(admin_router, prefix=settings.API_V1_STR)
+app.include_router(auth_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", tags=["Health"])

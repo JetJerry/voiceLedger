@@ -17,7 +17,8 @@ class Product(Base):
     price = Column(Float, nullable=False, default=0.0)
     category = Column(String(100), nullable=True, default="General")
     description = Column(Text, nullable=True)          # Optional item description
-    unit = Column(String(50), nullable=True)            # e.g. "kg", "piece", "plate", "glass", "packet"
+    unit = Column(String(50), nullable=True)            # e.g. "kg", "piece", "plate", "glass", "packet", "strip"
+    attributes = Column(Text, nullable=True, default="{}")  # Dynamic JSON attributes for any business (fruits, pharmacy, cafe, hardware, etc.)
     is_active = Column(Boolean, default=True, nullable=False)  # Soft delete / hide items
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc),

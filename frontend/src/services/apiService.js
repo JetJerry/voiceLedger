@@ -1,3 +1,4 @@
+
 import { getApiBase } from '../config/api';
 
 export const apiService = {
@@ -52,5 +53,175 @@ export const apiService = {
       throw new Error(`Health check failed: ${res.status}`);
     }
     return await res.json();
-  }
+  },
+
+  // ── Open-Ended Catalog & Menu APIs ────────────────────────────────
+  async getCatalogProducts(category = null, search = '') {
+    const base = getApiBase();
+    let url = `${base}/sales/catalog/products?active_only=true`;
+    if (category && category !== 'ALL') {
+      url += `&category=${encodeURIComponent(category)}`;
+    }
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch catalog: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async addCatalogProduct(data) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to add product: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async updateCatalogProduct(productId, data) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/products/${productId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to update product: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async deleteCatalogProduct(productId) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/products/${productId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to delete product: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async listSales(limit = 100) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales?limit=${limit}`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch sales: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  // ── Admin Multi-Merchant Hub APIs ─────────────────────────────────
+  async getAdminMetrics() {
+    const base = getApiBase();
+    const res = await fetch(`${base}/admin/metrics`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch admin metrics: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async getAdminMerchants(search = '') {
+    const base = getApiBase();
+    const url = search ? `${base}/admin/merchants?search=${encodeURIComponent(search)}` : `${base}/admin/merchants`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch merchants: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async getAdminMerchantDetail(merchantId) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/admin/merchants/${merchantId}`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch merchant details: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async createMerchant(data) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/admin/merchants`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to create merchant: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async updateMerchant(merchantId, data) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/admin/merchants/${merchantId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to update merchant: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async setActiveMerchant(merchantId) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/admin/merchants/${merchantId}/set-active`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to switch active merchant: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  // ── Authentication & Roles APIs ───────────────────────────────────
+  async login(username, password, role = 'merchant') {
+    const base = getApiBase();
+    const res = await fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Login failed. Please check your credentials.');
+    }
+    return await res.json();
+  },
+
+  async registerShopkeeper(data) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Registration failed.');
+    }
+    return await res.json();
+  },
+
+  async getDemoAccounts() {
+    const base = getApiBase();
+    const res = await fetch(`${base}/auth/demo-accounts`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch demo accounts: ${res.status}`);
+    }
+    return await res.json();
+  },
 };
+

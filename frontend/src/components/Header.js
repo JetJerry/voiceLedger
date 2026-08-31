@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, useWindowDimensions, ScrollView } from 'react-native';
 import { Mic, Settings, Wifi, CheckCircle2, Sparkles } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { getApiBase, setCustomApiBase } from '../config/api';
 
-export default function Header({ onRefresh }) {
+export default function Header({
+  onRefresh,
+  currentView = 'terminal',
+  onSelectView,
+  currentUser,
+  onLogout,
+}) {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
@@ -17,33 +23,98 @@ export default function Header({ onRefresh }) {
     if (onRefresh) onRefresh();
   };
 
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <View style={styles.headerContainer}>
       <View style={styles.topRow}>
         {/* Brand Group */}
         <View style={styles.brandGroup}>
-          <View style={styles.logoBadge}>
+          <View style={[styles.logoBadge, isAdmin && { backgroundColor: '#8b5cf6' }]}>
             <Mic size={22} color="#ffffff" strokeWidth={2.5} />
           </View>
           <View style={styles.titleWrap}>
-            <Text style={styles.appName}>VoiceLedger</Text>
+            <View style={styles.brandTitleRow}>
+              <Text style={styles.appName}>VoiceLedger</Text>
+              {isAdmin ? (
+                <View style={[styles.storeBadge, { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: '#8b5cf6' }]}>
+                  <Text style={[styles.storeBadgeText, { color: '#c4b5fd' }]}>
+                    ⚡ Platform Super Admin
+                  </Text>
+                </View>
+              ) : currentUser?.name ? (
+                <View style={styles.storeBadge}>
+                  <Text style={styles.storeBadgeText} numberOfLines={1}>
+                    🏪 {currentUser.name}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={styles.appSubtitle} numberOfLines={1}>
-              Voice-First Sales & Payment Arrival Verification
+              {isAdmin
+                ? 'Multi-Store Supervision & Live Payment Reconciliation'
+                : 'Voice-First Sales & Payment Arrival Verification'}
             </Text>
           </View>
         </View>
 
-        {/* Status Badges & Settings */}
-        <View style={styles.badgesContainer}>
-          <View style={[styles.pill, styles.pillRzp]}>
-            <View style={styles.dotLive} />
-            <Text style={styles.pillText}>Razorpay Test Mode</Text>
-          </View>
+        {/* Role-Specific Navigation Tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.navTabsScroll}>
+          <View style={styles.navTabs}>
+            {isAdmin ? (
+              /* Admin Navigation Tab */
+              <TouchableOpacity
+                style={[styles.navTab, currentView === 'admin' && styles.navTabAdminActive]}
+                onPress={() => onSelectView && onSelectView('admin')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.navTabText, currentView === 'admin' && styles.navTabTextActive]}>
+                  ⚡ Multi-Vendor Admin Hub
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              /* Shopkeeper Navigation Tabs (Strictly no admin tabs in merchant terminal) */
+              <>
+                <TouchableOpacity
+                  style={[styles.navTab, currentView === 'terminal' && styles.navTabActive]}
+                  onPress={() => onSelectView && onSelectView('terminal')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.navTabText, currentView === 'terminal' && styles.navTabTextActive]}>
+                    🎙️ Voice Terminal
+                  </Text>
+                </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={[styles.navTab, currentView === 'sales' && styles.navTabActive]}
+                  onPress={() => onSelectView && onSelectView('sales')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.navTabText, currentView === 'sales' && styles.navTabTextActive]}>
+                    🧾 Sales & Payments
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.navTab, currentView === 'catalog' && styles.navTabActive]}
+                  onPress={() => onSelectView && onSelectView('catalog')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.navTabText, currentView === 'catalog' && styles.navTabTextActive]}>
+                    📦 Menu & Items
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Status Badges, Settings & Logout */}
+        <View style={styles.badgesContainer}>
           {!isMobile && (
-            <View style={[styles.pill, styles.pillAi]}>
-              <Sparkles size={14} color="#818cf8" style={{ marginRight: 4 }} />
-              <Text style={[styles.pillText, { color: '#c7d2fe' }]}>Voice Agent Ready</Text>
+            <View style={[styles.pill, styles.pillRzp]}>
+              <View style={styles.dotLive} />
+              <Text style={styles.pillText}>Razorpay Test</Text>
             </View>
           )}
 
@@ -57,6 +128,17 @@ export default function Header({ onRefresh }) {
           >
             <Settings size={18} color={colors.textSecondary} />
           </TouchableOpacity>
+
+          {/* Logout Button */}
+          {onLogout && (
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={onLogout}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.logoutBtnText}>🚪 Logout</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -143,16 +225,64 @@ const styles = StyleSheet.create({
   titleWrap: {
     flex: 1,
   },
+  brandTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   appName: {
     fontSize: 22,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
+  storeBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  storeBadgeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+  },
   appSubtitle: {
     fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  navTabs: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    marginHorizontal: 12,
+  },
+  navTab: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+  navTabActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  navTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  navTabTextActive: {
+    color: '#ffffff',
   },
   badgesContainer: {
     flexDirection: 'row',
@@ -258,5 +388,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 13,
+  },
+  navTabAdminActive: {
+    backgroundColor: '#8b5cf6',
+  },
+  logoutBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: 'rgba(244, 63, 94, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.3)',
+    marginLeft: 6,
+  },
+  logoutBtnText: {
+    color: colors.accentRose,
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

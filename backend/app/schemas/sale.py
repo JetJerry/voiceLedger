@@ -50,12 +50,28 @@ class SaleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+from typing import List, Optional, Dict, Any
+import json
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
 class ProductBase(BaseModel):
-    name: str = Field(..., description="Item name — any product, any category (e.g. chai, notebook, hammer, shirt)")
+    name: str = Field(..., description="Item name — any product, any category (e.g. chai, notebook, hammer, shirt, apple, paracetamol)")
     price: float = Field(default=0.0, description="Price per unit in INR")
-    category: Optional[str] = Field(default="General", description="Free-form category (e.g. Snacks, Beverages, Stationery, Hardware)")
+    category: Optional[str] = Field(default="General", description="Free-form category (e.g. Fruits, Pharmacy, Kirana, Bakery, Cafe, Hardware)")
     description: Optional[str] = Field(default=None, description="Optional item description")
-    unit: Optional[str] = Field(default=None, description="Unit of measure (e.g. kg, piece, plate, glass, packet)")
+    unit: Optional[str] = Field(default=None, description="Unit of measure (e.g. kg, piece, plate, glass, packet, strip, box)")
+    attributes: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Dynamic key-value attributes for any business domain")
+
+    @field_validator("attributes", mode="before")
+    @classmethod
+    def parse_attributes_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v or {}
 
 
 class ProductCreate(ProductBase):
@@ -68,7 +84,18 @@ class ProductUpdate(BaseModel):
     category: Optional[str] = None
     description: Optional[str] = None
     unit: Optional[str] = None
+    attributes: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
+
+    @field_validator("attributes", mode="before")
+    @classmethod
+    def parse_attributes_json(cls, v):
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return {}
+        return v
 
 
 class ProductResponse(ProductBase):

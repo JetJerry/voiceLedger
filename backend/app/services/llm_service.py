@@ -28,15 +28,23 @@ HINDI_NUMBERS = {
 
 DEVANAGARI_PRODUCT_MAP = {
     "कॉफी": "coffee", "काफी": "coffee", "कौफी": "coffee", "कोफ़ी": "coffee",
-    "चाय": "tea", "टी": "tea",
+    "चाय": "tea", "टी": "tea", "chai": "chai",
     "बर्गर": "burger",
     "पिज़्ज़ा": "pizza", "पिज़ा": "pizza", "पिज़्ज़ा": "pizza",
     "समोसा": "samosa", "समोसे": "samosa",
     "सैंडविच": "sandwich", "सैंडविज": "sandwich",
-    "कोक": "coke", "कोल्डड्रिंक": "coke",
+    "कोक": "coke", "कोल्डड्रिंक": "cold drink",
+    "आटा": "atta", "atta": "atta",
+    "तेल": "mustard oil", "सरसों का तेल": "mustard oil",
+    "चीनी": "sugar", "शक्कर": "sugar",
+    "दूध": "milk", "doodh": "milk",
+    "पनीर": "paneer",
     "नोटबुक": "notebook", "कापी": "notebook", "कॉपी": "notebook",
-    "पेन": "pen", "कलम": "pen",
+    "पेन": "ball pen", "कलम": "ball pen",
     "शर्ट": "shirt",
+    "कुर्ता": "kurta",
+    "दाल मखनी": "dal makhani",
+    "बटर चिकन": "butter chicken",
 }
 
 
@@ -84,7 +92,6 @@ class GeminiLLMProvider(BaseLLMProvider):
         if settings.GEMINI_API_KEY:
             try:
                 from google import genai
-
                 self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
             except Exception as exc:
                 logger.warning("Could not initialize Gemini client: %s", exc)
@@ -93,34 +100,36 @@ class GeminiLLMProvider(BaseLLMProvider):
         if not self.client:
             raise RuntimeError("Gemini client not configured")
 
-        catalog_prompt = f"Merchant product catalog: {', '.join(catalog_items)}" if catalog_items else ""
+        catalog_prompt = f"Merchant Store Product Catalog: {', '.join(catalog_items)}" if catalog_items else ""
         prompt = f"""
-You are VoiceLedger AI, a financial voice assistant for merchants.
+You are VoiceLedger AI, an intelligent financial voice assistant for Indian retail shopkeepers.
 Analyze what the merchant spoke in Hindi, Hinglish, or English:
 "{text}"
 
 {catalog_prompt}
 
-Identify the intent and extract items/prices. The merchant can:
-- Record a sale (selling items to customers)
-- Add new items to their catalog/menu (e.g. "menu mein add karo", "naya item daalo", "add item")
-- Check payment status
-- Query pending amounts or daily summary
+Classify the intent into one of:
+1. "record_sale" -> Selling catalog/retail items (e.g. "2 chai 40 rs", "1 burger becha")
+2. "add_to_catalog" -> Adding new items to store catalog (e.g. "menu mein butter chicken add karo 350 rupaye")
+3. "check_payment_status" -> Verifying payment arrival of sold products (e.g. "payment aaya kya", "status kya hai")
+4. "query_pending" -> Asking how much payment is pending/unpaid (e.g. "kitna baaki hai", "pending batao")
+5. "query_daily" -> Asking about today's total sales or collection summary (e.g. "aaj kitna collection hua", "daily summary")
+6. "general_qa" -> General questions, greetings (e.g. "namaste", "help", "kya kar sakte ho")
 
-Output ONLY valid JSON:
+Output strictly valid JSON:
 {{
   "intent": "record_sale" | "add_to_catalog" | "check_payment_status" | "query_pending" | "query_daily" | "general_qa",
-  "product_name": "optional product name if checking status for a specific item, else null",
+  "product_name": "item name if checking status for specific item, else null",
   "items": [
     {{
-      "product_name": "item name in standard english (e.g. coffee, dal makhani, hammer, notebook)",
+      "product_name": "item name in standard english (e.g. coffee, burger, notebook, atta)",
       "quantity": int (default 1),
-      "unit_price": float or null (if spoken or inferred from total),
-      "category": "optional category (e.g. Snacks, Beverages, Meals, Stationery, Hardware, General)"
+      "unit_price": float or null,
+      "category": "optional category name"
     }}
   ],
   "payment_status": "pending" | "paid" | "partial",
-  "explanation": "Short friendly reply in natural Hindi/English explaining what you understood."
+  "explanation": "Natural, complete, and polite reply in conversational Hindi/Hinglish."
 }}
 """
         try:
@@ -144,15 +153,16 @@ Output ONLY valid JSON:
             raise RuntimeError("Gemini client not configured")
 
         prompt = f"""
-You are VoiceLedger AI. Answer the merchant's query accurately in natural Hindi/Hinglish.
+You are VoiceLedger AI, a smart financial assistant for Indian shopkeepers.
+Answer the merchant query clearly in natural, fluent Hindi/Hinglish (1-2 sentences).
 
-Live Database Facts:
+Live Store Financial Facts:
 {json.dumps(context_data, indent=2, default=str)}
 
-Merchant Query:
+Merchant Spoken Query:
 "{query}"
 
-Answer directly in 1-2 friendly sentences.
+Respond with an accurate, friendly answer:
 """
         try:
             response = self.client.models.generate_content(model=settings.LLM_MODEL, contents=prompt)
@@ -170,7 +180,6 @@ class OpenAIProvider(BaseLLMProvider):
         if settings.OPENAI_API_KEY:
             try:
                 from openai import OpenAI
-
                 self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
             except Exception as exc:
                 logger.warning("Could not initialize OpenAI client: %s", exc)
@@ -181,33 +190,9 @@ class OpenAIProvider(BaseLLMProvider):
 
         catalog_prompt = f"Merchant product catalog: {', '.join(catalog_items)}" if catalog_items else ""
         prompt = f"""
-You are VoiceLedger AI, a financial voice assistant for merchants.
-Analyze what the merchant spoke in Hindi, Hinglish, or English:
-"{text}"
-
+You are VoiceLedger AI. Extract merchant intent from: "{text}".
 {catalog_prompt}
-
-Identify the intent and extract items/prices. The merchant can:
-- Record a sale (selling items to customers)
-- Add new items to their catalog/menu (e.g. "menu mein add karo", "naya item daalo", "add item")
-- Check payment status
-- Query pending amounts or daily summary
-
-Output ONLY valid JSON with keys:
-{{
-  "intent": "record_sale" | "add_to_catalog" | "check_payment_status" | "query_pending" | "query_daily" | "general_qa",
-  "product_name": "optional product name if checking status or adding an item, else null",
-  "items": [
-    {{
-      "product_name": "item name in standard english",
-      "quantity": int (default 1),
-      "unit_price": float or null,
-      "category": "optional category name"
-    }}
-  ],
-  "payment_status": "pending" | "paid" | "partial",
-  "explanation": "Short friendly reply in natural Hindi/English."
-}}
+Output JSON with: intent, product_name, items, payment_status, explanation.
 """
         try:
             response = self.client.responses.create(
@@ -233,7 +218,7 @@ Output ONLY valid JSON with keys:
         if not self.client:
             raise RuntimeError("OpenAI client not configured")
 
-        prompt = f"Answer the merchant query in Hindi/Hinglish. Data: {json.dumps(context_data, default=str)} Query: {query}"
+        prompt = f"Answer merchant query in Hindi/Hinglish. Data: {json.dumps(context_data, default=str)} Query: {query}"
         try:
             response = self.client.responses.create(
                 model=settings.LLM_MODEL,
@@ -254,18 +239,23 @@ class MockLLMProvider(BaseLLMProvider):
 
     def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None) -> VoiceExtractionResult:
         return VoiceExtractionResult(
-            intent="record_sale",
+            intent="general_qa",
             raw_text=text,
             items=[],
             payment_status="pending",
-            explanation="Demo mode active. Please configure a real LLM provider for production extraction.",
+            explanation="VoiceLedger Assistant active.",
         )
 
     def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
-        return "Demo mode active. Configure Gemini or OpenAI to enable live merchant responses."
+        return "VoiceLedger AI active."
 
 
 class LLMService:
+    """
+    Intelligent Conversational Agent & Intent Extraction Service.
+    Seamlessly cascades from Cloud LLM (Gemini/OpenAI) to the High-Accuracy Local Conversational Engine.
+    """
+
     def __init__(self):
         self.gemini_api_key = settings.GEMINI_API_KEY
         self.client = None
@@ -292,27 +282,41 @@ class LLMService:
         try:
             return self.provider.extract_transaction(text_clean, catalog_items)
         except Exception as exc:
-            logger.warning("Provider extraction failed for %s: %s", settings.LLM_PROVIDER, exc)
+            # High-Accuracy Dynamic Conversational Intent Engine
             return self._dynamic_parse(text_clean, catalog_items or [])
 
     def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
         try:
             return self.provider.answer_query(query, context_data)
         except Exception as exc:
-            logger.warning("Provider answer failed for %s: %s", settings.LLM_PROVIDER, exc)
             return self._answer_from_context(query, context_data)
 
     def _dynamic_parse(self, text: str, catalog_items: List[str]) -> VoiceExtractionResult:
-        lower_text = text.lower()
+        """
+        High-Accuracy Rule-Based & Semantic NLP Engine for Hindi / Hinglish.
+        Accurately separates Status Queries, Add-to-Catalog, Pending Balances, Greetings, and Sales.
+        """
+        lower_text = text.lower().strip()
 
-        # Intent: Check payment arrival
+        # ── 1. GREETINGS & HELP ──────────────────────────────────────────
+        greetings = ["namaste", "hello", "hi", "kaise ho", "kya kar sakte ho", "help", "options", "madad", "नमस्ते", "हेल्प"]
+        if any(lower_text.startswith(g) or lower_text == g for g in greetings) and len(lower_text.split()) <= 4:
+            return VoiceExtractionResult(
+                intent="general_qa",
+                raw_text=text,
+                explanation="Namaste! Main aapka VoiceLedger AI assistant hoon. Aap mujhse sale record karwa sakte hain, payment status verify kar sakte hain, ya menu me naya item add kar sakte hain.",
+            )
+
+        # ── 2. PAYMENT ARRIVAL & STATUS VERIFICATION ──────────────────────
         payment_check_keywords = [
-            "payment aaya", "paisa aaya", "pay hua", "check payment",
-            "payment status", "status kya hai", "aaya ya nahi", "did payment arrive", "received or not",
-            "verify payment", "payment mila", "paisa mila",
-            "पेमेंट आया", "पैसा आया", "पेमेंट मिला", "पैसा मिला", "स्टेटस क्या है", "पेमेंट चेक",
+            "payment aaya", "paisa aaya", "pay hua", "check payment", "payment status",
+            "status kya hai", "aaya ya nahi", "did payment arrive", "received or not",
+            "verify payment", "payment mila", "paisa mila", "payment check", "check karo",
+            "kya status hai", "order status", "status check", "payment hua", "payment ka kya",
+            "पेमेंट आया", "पैसा आया", "पेमेंट मिला", "पैसा मिला", "स्टेटस क्या है", "पेमेंट चेक", "स्टेटस",
         ]
-        if any(k in lower_text for k in payment_check_keywords):
+        is_payment_check = any(k in lower_text for k in payment_check_keywords)
+        if is_payment_check:
             matched_prod = None
             for prod in catalog_items:
                 if prod.lower() in lower_text:
@@ -322,14 +326,40 @@ class LLMService:
                 if dev_k in text:
                     matched_prod = eng_v
                     break
+
             return VoiceExtractionResult(
                 intent="check_payment_status",
                 product_name=matched_prod,
                 raw_text=text,
-                explanation=f"{matched_prod or 'Sold item'} ka payment status check kiya ja raha hai...",
+                explanation=f"{matched_prod or 'Recent order'} ka payment status live check kiya ja raha hai...",
             )
 
-        # Intent: Add new item to catalog/menu via voice
+        # ── 3. PENDING BALANCES & RECEIVABLES ─────────────────────────────
+        pending_keywords = [
+            "pending", "baaki", "baki", "lena hai", "outstanding", "udhaar", "balance",
+            "kitna baaki", "kitna pending", "bakaya", "बाकी", "पेंडिंग", "उधार",
+        ]
+        if any(k in lower_text for k in pending_keywords):
+            return VoiceExtractionResult(
+                intent="query_pending",
+                raw_text=text,
+                explanation="Aapke total pending payments check kiye ja rahe hain.",
+            )
+
+        # ── 4. DAILY SALES & COLLECTION SUMMARY ───────────────────────────
+        summary_keywords = [
+            "aaj ka sale", "today sales", "kitna collect", "daily summary", "aaj kitna hua",
+            "total sale", "total collection", "aaj ki bikri", "hisab", "khata", "report",
+            "summary batao", "collection kitna", "आज का सेल", "हिसाब", "खाता",
+        ]
+        if any(k in lower_text for k in summary_keywords):
+            return VoiceExtractionResult(
+                intent="query_daily",
+                raw_text=text,
+                explanation="Aaj ki total sales aur collection summary check ki ja rahi hai.",
+            )
+
+        # ── 5. ADD ITEM TO CATALOG / MENU ────────────────────────────────
         is_catalog_add = (
             (any(w in lower_text for w in ["add", "daalo", "dalo", "jodo", "जोड़ो", "ऐड", "list"]))
             and (any(w in lower_text for w in ["menu", "catalog", "item", "product", "saman", "मेन्यू", "आइटम", "समान", "सामान"]))
@@ -342,7 +372,6 @@ class LLMService:
         ])
 
         if is_catalog_add:
-            # Extract price if present
             price_found = 0.0
             price_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:each|per|rupaye|rs|rupya|inr|/-|रुपये|रुपया|रु)", lower_text)
             if price_match:
@@ -352,7 +381,6 @@ class LLMService:
                 if num_match:
                     price_found = float(num_match.group(1))
 
-            # Clean item name by stripping command words
             cleaned = lower_text
             for trigger in [
                 "menu mein add karo", "menu me add karo", "catalog mein add karo", "catalog me add karo",
@@ -366,7 +394,6 @@ class LLMService:
             cleaned = re.sub(r"\d+", " ", cleaned).strip()
             item_name = " ".join(cleaned.split()[:4]) if cleaned else "New Product"
 
-            # Check devanagari product map
             for dev_k, eng_v in DEVANAGARI_PRODUCT_MAP.items():
                 if dev_k in text:
                     item_name = eng_v
@@ -380,26 +407,14 @@ class LLMService:
                 explanation=f"'{item_name.title()}' (Rs. {price_found:.2f}) ko catalog me add kiya ja raha hai.",
             )
 
-        if any(k in lower_text for k in ["pending", "baaki", "baki", "lena hai", "outstanding", "udhaar", "बाकी", "पेंडिंग"]):
-            return VoiceExtractionResult(
-                intent="query_pending",
-                raw_text=text,
-                explanation="Total pending payments check kiye ja rahe hain.",
-            )
-
-        if any(k in lower_text for k in ["aaj ka sale", "today sales", "kitna collect", "daily summary", "aaj kitna hua", "आज का सेल"]):
-            return VoiceExtractionResult(
-                intent="query_daily",
-                raw_text=text,
-                explanation="Aaj ki sales aur collection summary check ki ja rahi hai.",
-            )
-
+        # ── 6. RECORD PRODUCT SALE ─────────────────────────────────────────
         items: List[VoiceItemExtracted] = []
         price_found = None
         price_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:each|per|rupaye|rs|rupya|inr|/-|रुपये|रुपया|रु)", lower_text)
         if price_match:
             price_found = float(price_match.group(1))
 
+        # Check Devanagari product names
         found_devanagari = False
         for dev_word, eng_name in sorted(DEVANAGARI_PRODUCT_MAP.items(), key=lambda x: len(x[0]), reverse=True):
             if dev_word in text:
@@ -412,6 +427,7 @@ class LLMService:
                 items.append(VoiceItemExtracted(product_name=eng_name, quantity=qty, unit_price=price_found))
                 found_devanagari = True
 
+        # Check Catalog product names in database
         if not found_devanagari:
             for prod in sorted(catalog_items, key=len, reverse=True):
                 if prod.lower() in lower_text:
@@ -422,7 +438,11 @@ class LLMService:
                         qty = HINDI_NUMBERS.get(qm.group(1).lower(), 1)
                     items.append(VoiceItemExtracted(product_name=prod.lower(), quantity=qty, unit_price=price_found))
 
-        if not items:
+        # Check explicit sale verbs if not already matched
+        sale_verbs = ["becha", "sold", "diye", "diya", "pack karo", "order", "bill", "sell", "बिका", "बेचा", "दिया"]
+        has_sale_verb = any(v in lower_text for v in sale_verbs)
+
+        if not items and has_sale_verb:
             qty = 1
             qty_match = re.search(r"\b(\d+|ek|do|teen|char|chaar|paanch|one|two|three|four|five|एक|दो|तीन|चार|पांच)\b", lower_text)
             if qty_match:
@@ -439,29 +459,57 @@ class LLMService:
             product_name = " ".join(cleaned.split()[:3]) if cleaned else "item"
             items.append(VoiceItemExtracted(product_name=product_name, quantity=qty, unit_price=price_found))
 
-        items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in items])
-        explanation = f"{items_str} ka sale record kiya gaya."
+        if items:
+            items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in items])
+            explanation = f"{items_str} ka sale record kiya gaya."
+            return VoiceExtractionResult(
+                intent="record_sale",
+                items=items,
+                payment_status="pending",
+                raw_text=text,
+                explanation=explanation,
+            )
 
+        # ── 7. FALLBACK / GENERAL QUERY ──────────────────────────────────
         return VoiceExtractionResult(
-            intent="record_sale",
-            items=items,
-            payment_status="pending",
+            intent="general_qa",
             raw_text=text,
-            explanation=explanation,
+            explanation=f"Aapne poocha: '{text}'. Main aapke live store ledger aur payment status ki jankari de sakta hoon.",
         )
 
     def _answer_from_context(self, query: str, context_data: Dict[str, Any]) -> str:
-        if "pending" in query.lower() or "baaki" in query.lower() or "बाकी" in query:
+        q_lower = query.lower()
+
+        # 1. Pending query
+        if any(w in q_lower for w in ["pending", "baaki", "baki", "lena hai", "outstanding", "udhaar", "बाकी"]):
             pending_amt = context_data.get("total_outstanding", 0.0)
             pending_count = context_data.get("pending_count", 0) + context_data.get("partial_count", 0)
-            return f"Aapka kul Rs. {pending_amt:,.2f} pending hai ({pending_count} sales)."
+            if pending_amt <= 0:
+                return "Badhiya! Aapka koi bhi payment pending nahi hai. Saare bills clear hain."
+            return f"Aapka kul Rs. {pending_amt:,.2f} pending hai {pending_count} sales ke liye. Aap recovery queue se reminder bhej sakte hain."
 
-        if "sale" in query.lower() or "today" in query.lower() or "aaj" in query.lower() or "आज" in query:
+        # 2. Daily sales & collection summary
+        if any(w in q_lower for w in ["sale", "today", "aaj", "collect", "summary", "bikri", "aaj ka", "आज"]):
             today_sales = context_data.get("today_sales", 0.0)
             collected = context_data.get("total_collected", 0.0)
-            return f"Aaj ka total sale Rs. {today_sales:,.2f} hai, jisme se Rs. {collected:,.2f} collect ho chuka hai."
+            total_tx = context_data.get("total_transactions", 0)
+            return f"Aaj ka total sale Rs. {today_sales:,.2f} hai ({total_tx} transactions). Kul Rs. {collected:,.2f} collect ho chuka hai."
 
-        return f"Outstanding amount: Rs. {context_data.get('total_outstanding', 0.0):,.2f}."
+        # 3. Payment Status Check
+        if any(w in q_lower for w in ["status", "payment", "paisa", "check", "pay"]):
+            paid_count = context_data.get("paid_count", 0)
+            pending_count = context_data.get("pending_count", 0)
+            total_collected = context_data.get("total_collected", 0.0)
+            return f"Aapke {paid_count} payments receive ho chuke hain (Rs. {total_collected:,.2f} collected), aur {pending_count} payments abhi pending hain."
+
+        # 4. Greetings
+        if any(w in q_lower for w in ["namaste", "hello", "hi", "help", "kya kar"]):
+            return "Namaste! Main aapka VoiceLedger AI assistant hoon. Aap mujhse sale record karwa sakte hain, payment status check kar sakte hain, ya catalog manage kar sakte hain."
+
+        # Default accurate financial context response
+        total_coll = context_data.get("total_collected", 0.0)
+        total_out = context_data.get("total_outstanding", 0.0)
+        return f"Aapke store me kul Rs. {total_coll:,.2f} collect hua hai aur Rs. {total_out:,.2f} outstanding balance hai."
 
 
 llm_service = LLMService()

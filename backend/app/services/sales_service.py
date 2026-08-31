@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 from sqlalchemy.orm import Session
 from backend.app.config import settings
 from backend.app.models import Merchant, Product, Sale, SaleItem
@@ -9,17 +9,28 @@ from backend.app.services.razorpay_service import razorpay_service
 
 class SalesService:
     def get_or_create_merchant(self, db: Session, merchant_name: Optional[str] = None, currency: str = "INR") -> Merchant:
-        normalized_name = (merchant_name or settings.DEFAULT_MERCHANT_NAME or "VoiceLedger Merchant").strip()
+        if merchant_name:
+            merchant = db.query(Merchant).filter(Merchant.name == merchant_name.strip()).first()
+            if merchant:
+                return merchant
 
+        # 1. Prioritize currently active merchant in terminal
+        active_merchant = db.query(Merchant).filter(Merchant.is_current_active == True).first()
+        if active_merchant:
+            return active_merchant
+
+        # 2. Check by configured default name
+        normalized_name = (settings.DEFAULT_MERCHANT_NAME or "VoiceLedger Merchant").strip()
         merchant = db.query(Merchant).filter(Merchant.name == normalized_name).first()
         if merchant:
             return merchant
 
-        merchant = db.query(Merchant).order_by(Merchant.created_at.desc()).first()
+        # 3. Fallback to latest active merchant
+        merchant = db.query(Merchant).filter(Merchant.is_active == True).order_by(Merchant.created_at.desc()).first()
         if merchant:
             return merchant
 
-        merchant = Merchant(name=normalized_name, currency=currency or "INR")
+        merchant = Merchant(name=normalized_name, currency=currency or "INR", is_active=True, is_current_active=True)
         db.add(merchant)
         db.commit()
         db.refresh(merchant)
@@ -60,11 +71,13 @@ class SalesService:
         category: Optional[str] = "General",
         unit: Optional[str] = None,
         description: Optional[str] = None,
+        attributes: Optional[Dict[str, Any]] = None,
     ) -> Product:
         """
         Add a new product or update an existing one in the merchant catalog.
-        Open schema — any item of any type/category can be added.
+        Open schema — any item of any type/category can be added with dynamic attributes.
         """
+        import json
         merchant = self.get_or_create_merchant(db)
         clean_name = name.strip().lower()
         
@@ -72,6 +85,8 @@ class SalesService:
             Product.merchant_id == merchant.id,
             Product.name == clean_name
         ).first()
+
+        attrs_str = json.dumps(attributes) if attributes is not None else None
 
         if product:
             product.price = price if price > 0 else product.price
@@ -81,6 +96,8 @@ class SalesService:
                 product.unit = unit
             if description:
                 product.description = description
+            if attrs_str is not None:
+                product.attributes = attrs_str
             product.is_active = True
         else:
             product = Product(
@@ -90,6 +107,7 @@ class SalesService:
                 category=category or "General",
                 unit=unit,
                 description=description,
+                attributes=attrs_str or "{}",
                 is_active=True,
             )
             db.add(product)

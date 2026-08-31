@@ -14,12 +14,15 @@ class MerchantAgent:
     def process_merchant_command(self, db: Session, request: VoiceProcessRequest) -> VoiceProcessResponse:
         """
         Guarded Agent Orchestrator:
-        - Dynamically passes database catalog items to LLMService.
+        - Dynamically passes active merchant database catalog items to LLMService.
         - Handles sale recording and payment arrival verification via voice.
         - Generates natural Hindi/English neural TTS speech audio.
         """
-        # Fetch current catalog product names from database dynamically
-        products = db.query(Product).all()
+        # Active merchant context
+        merchant = sales_service.get_or_create_merchant(db)
+
+        # Fetch active merchant catalog products
+        products = db.query(Product).filter(Product.merchant_id == merchant.id, Product.is_active == True).all()
         catalog_names = [p.name for p in products]
 
         # 1. AI Extraction
@@ -30,16 +33,16 @@ class MerchantAgent:
         if intent == "check_payment_status":
             target_sale = None
             if extraction.product_name:
-                # Find recent sale matching the spoken product name
-                sales = db.query(Sale).order_by(Sale.created_at.desc()).limit(20).all()
+                # Find recent sale matching the spoken product name for this merchant
+                sales = db.query(Sale).filter(Sale.merchant_id == merchant.id).order_by(Sale.created_at.desc()).limit(20).all()
                 for s in sales:
                     if any(extraction.product_name in it.product_name.lower() for it in s.items):
                         target_sale = s
                         break
 
-            # Fallback to the latest recorded sale
+            # Fallback to the latest recorded sale for this merchant
             if not target_sale:
-                target_sale = db.query(Sale).order_by(Sale.created_at.desc()).first()
+                target_sale = db.query(Sale).filter(Sale.merchant_id == merchant.id).order_by(Sale.created_at.desc()).first()
 
             if target_sale:
                 items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in target_sale.items]) or "Sold item"
@@ -167,7 +170,7 @@ class MerchantAgent:
 
         # 5. Handle Intent: Query Pending / Collection Summaries
         elif intent in ["query_pending", "query_daily", "general_qa"]:
-            metrics = self._get_summary_metrics(db)
+            metrics = self._get_summary_metrics(db, merchant_id=merchant.id)
             agent_reply = llm_service.answer_query(request.text, metrics)
             audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
             return VoiceProcessResponse(
@@ -187,12 +190,14 @@ class MerchantAgent:
             action_taken="UNKNOWN_INTENT"
         )
 
-    def _get_summary_metrics(self, db: Session) -> Dict[str, Any]:
+    def _get_summary_metrics(self, db: Session, merchant_id: Optional[int] = None) -> Dict[str, Any]:
         today_start = datetime.combine(date.today(), datetime.min.time())
-        sales_today = db.query(Sale).filter(Sale.created_at >= today_start).all()
-        today_sales = sum(s.total_amount for s in sales_today)
-        
-        all_sales = db.query(Sale).all()
+        query = db.query(Sale)
+        if merchant_id:
+            query = query.filter(Sale.merchant_id == merchant_id)
+
+        all_sales = query.all()
+        today_sales = sum(s.total_amount for s in all_sales if s.created_at >= today_start)
         total_collected = sum(s.received_amount for s in all_sales)
         total_outstanding = sum(s.outstanding_amount for s in all_sales)
         

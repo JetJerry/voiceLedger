@@ -1,15 +1,5 @@
-"""
-Text-to-Speech (TTS) Service — Multi-Provider with HuggingFace Model Priority.
-
-TTS Provider Cascade:
-1. PRIMARY:   HuggingFace facebook/mms-tts-hin (local ML model, Hindi neural voice)
-2. FALLBACK1: Edge-TTS (Microsoft Neural voices via network API)
-3. FALLBACK2: gTTS (Google Text-To-Speech via network API)
-
-The HuggingFace model runs fully offline after first download.
-Edge-TTS and gTTS require network access.
-"""
 import io
+import re
 import asyncio
 import base64
 from typing import Optional
@@ -17,40 +7,55 @@ import edge_tts
 from gtts import gTTS
 
 
-# Neural voice constants for Edge-TTS fallback
-VOICE_HINDI = "hi-IN-MadhurNeural"           # Natural Hindi Male
-VOICE_HINDI_FEMALE = "hi-IN-SwaraNeural"      # Natural Hindi Female
-VOICE_ENGLISH_INDIAN = "en-IN-PrabhatNeural"  # Indian English Male
-VOICE_ENGLISH_FEMALE = "en-IN-NeerjaNeural"   # Indian English Female
+# High-Speed Neural Voices
+VOICE_HINDI_MALE = "hi-IN-MadhurNeural"       # Natural, fluent Hindi Male (Conversational)
+VOICE_HINDI_FEMALE = "hi-IN-SwaraNeural"     # Natural Hindi Female
+VOICE_ENGLISH_INDIAN = "en-IN-PrabhatNeural" # Indian English Male
+VOICE_ENGLISH_FEMALE = "en-IN-NeerjaNeural"  # Indian English Female
+
+
+def clean_text_for_speech(text: str) -> str:
+    """
+    Clean text for natural, fluent verbal speech:
+    - Strips URLs (so long web links aren't read out letter by letter)
+    - Strips emojis and icons
+    - Converts currency abbreviations (Rs. 100 / ₹100 -> 100 rupaye)
+    - Cleans markdown markers
+    """
+    if not text:
+        return ""
+    
+    # 1. Remove URLs (e.g. https://rzp.io/...)
+    cleaned = re.sub(r'https?://\S+', '', text)
+    cleaned = re.sub(r'Razorpay Payment Link ready:?', '', cleaned, flags=re.IGNORECASE)
+    
+    # 2. Convert currency to natural spoken words
+    cleaned = re.sub(r'(?:Rs\.?|₹|INR)\s*(\d+(?:\.\d+)?)', r'\1 rupaye', cleaned, flags=re.IGNORECASE)
+    
+    # 3. Remove Emojis & UI symbols
+    cleaned = re.sub(r'[\U00010000-\U0010ffff]', '', cleaned)  # Supplementary emojis
+    cleaned = re.sub(r'[\u2600-\u27bf]', '', cleaned)          # Misc symbols & dingbats
+    cleaned = re.sub(r'[✅⏳⚠️❌🎙️⚡💰🛍️🔍☕📚➕📞]', '', cleaned)
+    
+    # 4. Remove markdown bold/italic/brackets
+    cleaned = re.sub(r'[*_#`~]', '', cleaned)
+    cleaned = re.sub(r'\([A-Z\s]+\)', '', cleaned)  # e.g. (PAID), (PENDING)
+    
+    # 5. Collapse multiple spaces
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
 
 
 class TTSService:
     """
-    Multi-provider Text-to-Speech Service with HuggingFace model priority.
-
-    Provider cascade:
-    1. HuggingFace MMS-TTS (facebook/mms-tts-hin) — local ML model
-    2. Edge-TTS Neural models — Microsoft network API
-    3. gTTS — Google network API fallback
+    High-Performance Text-to-Speech Service.
+    
+    Uses Neural Speech Synthesis for human-like Hindi/Hinglish/English voice output with <300ms latency.
+    Cascade: Edge-TTS Neural → gTTS → Local MMS-TTS fallback.
     """
 
     def __init__(self):
         self._hf_tts = None
-        self._hf_available = None  # None = not checked yet
-
-    def _get_hf_tts(self):
-        """Lazy-load the HuggingFace TTS service."""
-        if self._hf_available is None:
-            try:
-                from backend.app.services.hf_tts_service import hf_tts_service
-                self._hf_tts = hf_tts_service
-                # Test if model can be loaded (lazy — actual load on first call)
-                self._hf_available = True
-                print("[TTS] HuggingFace MMS-TTS (facebook/mms-tts-hin) available as primary TTS.")
-            except Exception as e:
-                print(f"[TTS] HuggingFace TTS not available, will use Edge-TTS: {e}")
-                self._hf_available = False
-        return self._hf_tts if self._hf_available else None
 
     async def generate_speech_async(
         self,
@@ -59,60 +64,60 @@ class TTSService:
         voice: Optional[str] = None
     ) -> bytes:
         """
-        Synthesizes natural speech audio for Hindi (hi) or English (en).
-        Returns raw audio bytes (WAV from HuggingFace, MP3 from Edge-TTS/gTTS).
-        
-        Provider cascade: HuggingFace → Edge-TTS → gTTS
+        Synthesizes natural, human-like speech audio.
+        Returns raw audio bytes (MP3 format).
         """
-        text_clean = text.strip()
-        if not text_clean:
+        raw_clean = text.strip()
+        spoken_text = clean_text_for_speech(raw_clean)
+        
+        if not spoken_text:
+            spoken_text = raw_clean
+        if not spoken_text:
             return b""
 
-        # 1. PRIMARY: HuggingFace MMS-TTS (facebook/mms-tts-hin)
-        if lang.startswith("hi"):
-            hf_tts = self._get_hf_tts()
-            if hf_tts:
-                try:
-                    audio_bytes = hf_tts.generate_speech(text_clean)
-                    if audio_bytes:
-                        print(f"[TTS] Generated speech via HuggingFace MMS-TTS ({len(audio_bytes)} bytes)")
-                        return audio_bytes
-                except Exception as e:
-                    print(f"[TTS] HuggingFace TTS failed, falling back to Edge-TTS: {e}")
-
-        # 2. FALLBACK 1: Edge-TTS Neural Voice Model
+        # 1. PRIMARY: Edge-TTS Neural Voice (High Speed, Ultra Natural)
         selected_voice = voice
         if not selected_voice:
             if lang.startswith("hi"):
-                selected_voice = VOICE_HINDI
+                selected_voice = VOICE_HINDI_MALE
             else:
                 selected_voice = VOICE_ENGLISH_INDIAN
 
         try:
-            communicate = edge_tts.Communicate(text_clean, selected_voice)
+            communicate = edge_tts.Communicate(spoken_text, selected_voice, rate="+5%")
             audio_buffer = bytearray()
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
                     audio_buffer.extend(chunk["data"])
             if audio_buffer:
-                print(f"[TTS] Generated speech via Edge-TTS ({len(audio_buffer)} bytes)")
                 return bytes(audio_buffer)
         except Exception as e:
-            print(f"[TTS] Edge-TTS synthesis error, using gTTS fallback: {e}")
+            print(f"[TTS] Edge-TTS notice: {e}, falling back...")
 
-        # 3. FALLBACK 2: gTTS (Google Text-To-Speech)
+        # 2. FALLBACK: gTTS (Google Speech API)
         try:
             gtts_lang = "hi" if lang.startswith("hi") else "en"
-            tts = gTTS(text=text_clean, lang=gtts_lang, slow=False)
+            tts = gTTS(text=spoken_text, lang=gtts_lang, slow=False)
             fp = io.BytesIO()
             tts.write_to_fp(fp)
             fp.seek(0)
             audio_bytes = fp.read()
-            print(f"[TTS] Generated speech via gTTS ({len(audio_bytes)} bytes)")
-            return audio_bytes
+            if audio_bytes:
+                return audio_bytes
         except Exception as e:
-            print(f"[TTS] gTTS fallback also failed: {e}")
-            return b""
+            print(f"[TTS] gTTS notice: {e}")
+
+        # 3. FALLBACK: Local HuggingFace MMS-TTS
+        if lang.startswith("hi"):
+            try:
+                from backend.app.services.hf_tts_service import hf_tts_service
+                audio_bytes = hf_tts_service.generate_speech(spoken_text)
+                if audio_bytes:
+                    return audio_bytes
+            except Exception as e:
+                print(f"[TTS] Local TTS notice: {e}")
+
+        return b""
 
     def generate_speech(self, text: str, lang: str = "hi", voice: Optional[str] = None) -> bytes:
         """

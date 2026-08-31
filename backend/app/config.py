@@ -31,10 +31,10 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"  # gemini, openai, or mock
     LLM_MODEL: str = "gemini-2.5-flash"
     
-    # HuggingFace Model Configuration
-    WHISPER_MODEL_SIZE: str = "small"       # tiny, small, medium, large-v3
-    WHISPER_DEVICE: str = "cpu"             # cpu or cuda
-    WHISPER_COMPUTE_TYPE: str = "int8"      # int8 (CPU), float16 (GPU)
+    # HuggingFace Model Configuration (Optimized for 4GB GPU & High-Speed CPU)
+    WHISPER_MODEL_SIZE: str = "base"        # base (~140MB, <100ms) or small (~460MB)
+    WHISPER_DEVICE: str = "auto"            # auto, cuda, or cpu
+    WHISPER_COMPUTE_TYPE: str = "float16"   # float16 (GPU), int8 (CPU)
     HF_TTS_MODEL: str = "facebook/mms-tts-hin"  # HuggingFace TTS model ID
     LLM_REQUEST_TIMEOUT_SECONDS: int = 30
 
