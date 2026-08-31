@@ -7,6 +7,7 @@ class VoiceItemExtracted(BaseModel):
     quantity: int = Field(default=1, description="Quantity ordered")
     unit_price: Optional[float] = Field(default=None, description="Spoken unit price if explicitly stated")
     category: Optional[str] = Field(default=None, description="Item category if mentioned (e.g. Snacks, Beverages, Stationery)")
+    unit: Optional[str] = Field(default=None, description="Unit of measure if mentioned (e.g. cup, kg, piece)")
 
 
 class VoiceExtractionResult(BaseModel):
@@ -27,6 +28,7 @@ class VoiceProcessRequest(BaseModel):
     text: str = Field(..., description="Transcribed merchant speech or typed text query")
     speak_response: bool = Field(default=True, description="Whether to generate TTS neural voice audio")
     voice_lang: str = Field(default="hi", description="hi (Hindi) or en (English)")
+    context: str = Field(default="terminal", description="terminal or catalog — adjusts intent priority")
 
 
 class VoiceProcessResponse(BaseModel):

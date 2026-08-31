@@ -10,17 +10,17 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Mic, MicOff, Send, Bot, Sparkles, Volume2 } from 'lucide-react-native';
+import { Mic, MicOff, Send, Bot, CheckCircle2 } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { voiceService } from '../services/voiceService';
 import { apiService } from '../services/apiService';
 
 const SAMPLE_PROMPTS = [
-  { label: '🔍 Payment aaya kya?', prompt: 'Payment aaya kya?' },
-  { label: '➕ Menu me Burger (₹100) add karo', prompt: 'Menu mein burger add karo 100 rupaye' },
-  { label: '☕ 2 Coffee + Sandwich (₹120)', prompt: '2 coffee aur 1 sandwich 120 rupaye' },
-  { label: '📚 3 Notebook (₹150)', prompt: '3 notebook 150 rs' },
-  { label: '❓ Kitna pending hai?', prompt: 'Kitna pending hai?' },
+  { label: 'Check Payment Status', prompt: 'Payment aaya kya?' },
+  { label: 'Add Burger (₹100)', prompt: 'Menu mein burger add karo 100 rupaye' },
+  { label: '2 Coffee + Sandwich (₹120)', prompt: '2 coffee aur 1 sandwich 120 rupaye' },
+  { label: '3 Notebooks (₹150)', prompt: '3 notebook 150 rs' },
+  { label: 'Pending Receivables', prompt: 'Kitna pending hai?' },
 ];
 
 export default function VoiceAssistantCard({ onActionComplete }) {
@@ -29,7 +29,6 @@ export default function VoiceAssistantCard({ onActionComplete }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentResponse, setAgentResponse] = useState(null);
 
-  // Pulse animation for recording
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -37,13 +36,13 @@ export default function VoiceAssistantCard({ onActionComplete }) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.25,
-            duration: 700,
+            toValue: 1.15,
+            duration: 600,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 700,
+            duration: 600,
             useNativeDriver: true,
           }),
         ])
@@ -54,7 +53,6 @@ export default function VoiceAssistantCard({ onActionComplete }) {
   }, [isRecording]);
 
   useEffect(() => {
-    // Initialize Web Speech API if in web browser
     voiceService.initWebSpeech(
       (transcript) => {
         setInputText(transcript);
@@ -74,7 +72,6 @@ export default function VoiceAssistantCard({ onActionComplete }) {
       if (Platform.OS === 'web') {
         voiceService.startListening();
       } else {
-        // Fallback for mobile native without Speech API: hint user
         setIsRecording(!isRecording);
       }
     }
@@ -86,7 +83,7 @@ export default function VoiceAssistantCard({ onActionComplete }) {
 
     setIsProcessing(true);
     setAgentResponse({
-      reply: 'VoiceLedger Agent is analyzing and checking...',
+      reply: 'Processing query...',
       action: 'Processing',
       status: 'loading',
     });
@@ -101,7 +98,6 @@ export default function VoiceAssistantCard({ onActionComplete }) {
         status: 'success',
       });
 
-      // Play neural voice audio
       if (data.audio_base64 || data.agent_reply) {
         voiceService.playTTSAudio(data.audio_base64, data.agent_reply);
       }
@@ -124,26 +120,29 @@ export default function VoiceAssistantCard({ onActionComplete }) {
       {/* Header Row */}
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <Text style={styles.cardIcon}>🎙️</Text>
+          <View style={styles.iconBadge}>
+            <Mic size={18} color="#ffffff" strokeWidth={2.2} />
+          </View>
           <View>
-            <Text style={styles.cardTitle}>Speak or Check Payment Arrival</Text>
+            <Text style={styles.cardTitle}>Voice Transaction & Settlement Terminal</Text>
             <Text style={styles.cardSubtitle}>
-              Speak sold products or ask: <Text style={{ fontStyle: 'italic', color: '#c7d2fe' }}>"Payment aaya kya?"</Text>
+              Speak sales entries or ask: <Text style={{ fontStyle: 'italic', color: '#a5b4fc' }}>"Payment aaya kya?"</Text>
             </Text>
           </View>
         </View>
 
-        {/* Big Animated Mic Button */}
+        {/* Mic Action Button */}
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
           <TouchableOpacity
             style={[styles.micBtn, isRecording && styles.micBtnActive]}
             onPress={toggleRecording}
             activeOpacity={0.8}
+            accessibilityLabel={isRecording ? "Stop voice listening" : "Start voice listening"}
           >
             {isRecording ? (
-              <MicOff size={28} color="#ffffff" strokeWidth={2.5} />
+              <MicOff size={22} color="#ffffff" strokeWidth={2.2} />
             ) : (
-              <Mic size={28} color="#ffffff" strokeWidth={2.5} />
+              <Mic size={22} color="#ffffff" strokeWidth={2.2} />
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -157,8 +156,8 @@ export default function VoiceAssistantCard({ onActionComplete }) {
           onChangeText={setInputText}
           placeholder={
             isRecording
-              ? 'Listening... Speak now!'
-              : 'Speak a sale (e.g. 2 coffee 60 rupaye) or ask: Payment aaya kya?...'
+              ? 'Listening... Speak clearly into microphone'
+              : 'Type or speak command (e.g. 2 coffee 60 rs, or Payment aaya kya?)...'
           }
           placeholderTextColor={colors.textMuted}
           onSubmitEditing={() => handleSendVoice()}
@@ -174,16 +173,16 @@ export default function VoiceAssistantCard({ onActionComplete }) {
             <ActivityIndicator size="small" color="#ffffff" />
           ) : (
             <>
-              <Text style={styles.sendBtnText}>Process</Text>
-              <Send size={16} color="#ffffff" style={{ marginLeft: 6 }} />
+              <Text style={styles.sendBtnText}>Execute</Text>
+              <Send size={14} color="#ffffff" style={{ marginLeft: 6 }} />
             </>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Quick Prompt Chips */}
+      {/* Quick Action Chips */}
       <View style={styles.chipsContainer}>
-        <Text style={styles.chipsLabel}>Quick Actions:</Text>
+        <Text style={styles.chipsLabel}>Suggestions:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {SAMPLE_PROMPTS.map((item, index) => (
             <TouchableOpacity
@@ -205,11 +204,11 @@ export default function VoiceAssistantCard({ onActionComplete }) {
       {agentResponse && (
         <View style={styles.responseBox}>
           <View style={styles.botIconWrap}>
-            <Bot size={22} color={colors.primary} />
+            <Bot size={18} color={colors.primary} />
           </View>
           <View style={styles.responseContent}>
             <View style={styles.responseHeader}>
-              <Text style={styles.agentName}>VoiceLedger Agent</Text>
+              <Text style={styles.agentName}>AI Assistant</Text>
               <View style={styles.actionTag}>
                 <Text style={styles.actionTagText}>{agentResponse.action}</Text>
               </View>
@@ -224,23 +223,18 @@ export default function VoiceAssistantCard({ onActionComplete }) {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 22,
+    marginBottom: 20,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   titleWrap: {
     flexDirection: 'row',
@@ -248,62 +242,61 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
-  cardIcon: {
-    fontSize: 28,
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   cardSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: 2,
   },
   micBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
   },
   micBtnActive: {
     backgroundColor: colors.accentRose,
-    shadowColor: colors.accentRose,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
   },
   textInput: {
     flex: 1,
-    backgroundColor: 'rgba(10, 14, 23, 0.7)',
+    backgroundColor: '#0b0f19',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
   },
   sendBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
     justifyContent: 'center',
   },
   sendBtnDisabled: {
@@ -312,37 +305,36 @@ const styles = StyleSheet.create({
   sendBtnText: {
     color: '#ffffff',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
   },
   chipsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
   },
   chipsLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
-    marginRight: 10,
+    marginRight: 8,
   },
   chipsScroll: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   chip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   chipHighlight: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderColor: 'rgba(99, 102, 241, 0.35)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: 'rgba(99, 102, 241, 0.3)',
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '500',
   },
@@ -351,22 +343,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   responseBox: {
-    marginTop: 20,
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    marginTop: 16,
+    backgroundColor: 'rgba(99, 102, 241, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.25)',
-    borderRadius: 14,
-    padding: 16,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
+    borderRadius: 10,
+    padding: 14,
     flexDirection: 'row',
   },
   botIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   responseContent: {
     flex: 1,
@@ -375,28 +367,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   agentName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#a5b4fc',
   },
   actionTag: {
-    backgroundColor: 'rgba(99, 102, 241, 0.25)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
   },
   actionTagText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#e0e7ff',
     textTransform: 'uppercase',
   },
   agentReplyText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textPrimary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
+import { TrendingUp, CheckCircle2, AlertTriangle, CreditCard } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 
 export default function MetricsGrid({ summary }) {
@@ -22,8 +23,10 @@ export default function MetricsGrid({ summary }) {
       {/* 1. Today's Sales */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.cardDot, styles.dotSales]} />
-          <Text style={styles.cardLabel}>Today's Sales</Text>
+          <View style={[styles.iconWrap, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
+            <TrendingUp size={16} color={colors.primary} />
+          </View>
+          <Text style={styles.cardLabel}>Today's Gross Sales</Text>
         </View>
         <Text style={styles.cardValue}>{formatCurrency(todaySales)}</Text>
       </View>
@@ -31,8 +34,10 @@ export default function MetricsGrid({ summary }) {
       {/* 2. Total Collected */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.cardDot, styles.dotCollected]} />
-          <Text style={styles.cardLabel}>Total Collected</Text>
+          <View style={[styles.iconWrap, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+            <CheckCircle2 size={16} color={colors.accentEmerald} />
+          </View>
+          <Text style={styles.cardLabel}>Settled Collections</Text>
         </View>
         <Text style={[styles.cardValue, { color: colors.accentEmerald }]}>
           {formatCurrency(collected)}
@@ -42,8 +47,10 @@ export default function MetricsGrid({ summary }) {
       {/* 3. Total Outstanding */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.cardDot, styles.dotOutstanding]} />
-          <Text style={styles.cardLabel}>Total Outstanding</Text>
+          <View style={[styles.iconWrap, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+            <AlertTriangle size={16} color={colors.accentRose} />
+          </View>
+          <Text style={styles.cardLabel}>Outstanding Receivables</Text>
         </View>
         <Text style={[styles.cardValue, { color: colors.accentRose }]}>
           {formatCurrency(outstanding)}
@@ -53,18 +60,20 @@ export default function MetricsGrid({ summary }) {
       {/* 4. Transactions Counts */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.cardDot, styles.dotTransactions]} />
-          <Text style={styles.cardLabel}>Transactions Status</Text>
+          <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+            <CreditCard size={16} color={colors.textSecondary} />
+          </View>
+          <Text style={styles.cardLabel}>Transaction Status</Text>
         </View>
         <View style={styles.badgeRow}>
           <View style={[styles.statusBadge, styles.badgePaid]}>
-            <Text style={styles.badgePaidText}><Text style={{ fontWeight: '800' }}>{paidCount}</Text> Paid</Text>
+            <Text style={styles.badgePaidText}><Text style={{ fontWeight: '700' }}>{paidCount}</Text> Paid</Text>
           </View>
           <View style={[styles.statusBadge, styles.badgePartial]}>
-            <Text style={styles.badgePartialText}><Text style={{ fontWeight: '800' }}>{partialCount}</Text> Partial</Text>
+            <Text style={styles.badgePartialText}><Text style={{ fontWeight: '700' }}>{partialCount}</Text> Partial</Text>
           </View>
           <View style={[styles.statusBadge, styles.badgePending]}>
-            <Text style={styles.badgePendingText}><Text style={{ fontWeight: '800' }}>{pendingCount}</Text> Pending</Text>
+            <Text style={styles.badgePendingText}><Text style={{ fontWeight: '700' }}>{pendingCount}</Text> Pending</Text>
           </View>
         </View>
       </View>
@@ -76,19 +85,19 @@ const styles = StyleSheet.create({
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 24,
+    gap: 14,
+    marginBottom: 20,
   },
   gridMobile: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 10,
   },
   metricCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 18,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
   },
   cardQuarter: {
     flex: 1,
@@ -102,46 +111,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  cardDot: {
-    width: 12,
-    height: 12,
+  iconWrap: {
+    width: 28,
+    height: 28,
     borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 8,
-    alignSelf: 'center',
-  },
-  dotSales: {
-    backgroundColor: colors.primary,
-  },
-  dotCollected: {
-    backgroundColor: colors.accentEmerald,
-  },
-  dotOutstanding: {
-    backgroundColor: colors.accentRose,
-  },
-  dotTransactions: {
-    backgroundColor: colors.textSecondary,
   },
   cardLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   cardValue: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 4,
+    marginTop: 2,
     flexWrap: 'wrap',
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
   },

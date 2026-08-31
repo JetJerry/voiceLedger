@@ -10,7 +10,19 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
-import { RefreshCw, ShoppingCart, Download, TrendingUp, DollarSign, Clock, CheckCircle2 } from 'lucide-react-native';
+import {
+  RefreshCw,
+  ShoppingCart,
+  Download,
+  Calendar,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  Search,
+  FileSpreadsheet,
+  PackageOpen,
+  Filter,
+} from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { apiService } from '../services/apiService';
 import SaleItemRow from './SaleItemRow';
@@ -96,12 +108,9 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
       {/* 1. Header Bar */}
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         <View style={{ flex: 1 }}>
-          <View style={styles.badgeHub}>
-            <Text style={styles.badgeHubText}>📈 Sales Analytics & Ledger</Text>
-          </View>
-          <Text style={styles.title}>Sales & Payment Ledger</Text>
+          <Text style={styles.title}>Sales & Payment Settlement Ledger</Text>
           <Text style={styles.subtitle}>
-            Monitor your daily, weekly, and monthly store revenue and export formatted Excel sheets.
+            Comprehensive transaction ledger with period analytics and structured spreadsheet exports.
           </Text>
         </View>
 
@@ -116,8 +125,8 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
               <>
-                <Download size={16} color="#ffffff" />
-                <Text style={styles.exportBtnText}>📊 Export Excel (.xlsx)</Text>
+                <FileSpreadsheet size={15} color="#ffffff" style={{ marginRight: 6 }} />
+                <Text style={styles.exportBtnText}>Export Excel (.xlsx)</Text>
               </>
             )}
           </TouchableOpacity>
@@ -132,7 +141,7 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
             activeOpacity={0.7}
           >
             <RefreshCw
-              size={14}
+              size={13}
               color={colors.textSecondary}
               style={isRefreshing ? styles.spinning : null}
             />
@@ -141,15 +150,16 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
         </View>
       </View>
 
-      {/* 2. Period Switcher Tabs */}
+      {/* 2. Period Switcher Tabs & Analytics Card */}
       <View style={styles.periodTabsCard}>
         <View style={styles.periodTabsRow}>
           <TouchableOpacity
             style={[styles.periodTab, selectedPeriod === 'today' && styles.periodTabActive]}
             onPress={() => setSelectedPeriod('today')}
           >
+            <Calendar size={13} color={selectedPeriod === 'today' ? '#ffffff' : colors.textMuted} style={{ marginRight: 5 }} />
             <Text style={[styles.periodTabText, selectedPeriod === 'today' && styles.periodTabTextActive]}>
-              📅 Today (Day)
+              Today
             </Text>
           </TouchableOpacity>
 
@@ -157,8 +167,9 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
             style={[styles.periodTab, selectedPeriod === 'week' && styles.periodTabActive]}
             onPress={() => setSelectedPeriod('week')}
           >
+            <Calendar size={13} color={selectedPeriod === 'week' ? '#ffffff' : colors.textMuted} style={{ marginRight: 5 }} />
             <Text style={[styles.periodTabText, selectedPeriod === 'week' && styles.periodTabTextActive]}>
-              📅 This Week (7 Days)
+              This Week (7D)
             </Text>
           </TouchableOpacity>
 
@@ -166,8 +177,9 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
             style={[styles.periodTab, selectedPeriod === 'month' && styles.periodTabActive]}
             onPress={() => setSelectedPeriod('month')}
           >
+            <Calendar size={13} color={selectedPeriod === 'month' ? '#ffffff' : colors.textMuted} style={{ marginRight: 5 }} />
             <Text style={[styles.periodTabText, selectedPeriod === 'month' && styles.periodTabTextActive]}>
-              📅 This Month (30 Days)
+              This Month (30D)
             </Text>
           </TouchableOpacity>
 
@@ -175,8 +187,9 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
             style={[styles.periodTab, selectedPeriod === 'all_time' && styles.periodTabActive]}
             onPress={() => setSelectedPeriod('all_time')}
           >
+            <Calendar size={13} color={selectedPeriod === 'all_time' ? '#ffffff' : colors.textMuted} style={{ marginRight: 5 }} />
             <Text style={[styles.periodTabText, selectedPeriod === 'all_time' && styles.periodTabTextActive]}>
-              🏆 All Time Total
+              All-Time
             </Text>
           </TouchableOpacity>
         </View>
@@ -186,48 +199,48 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
           {/* GMV */}
           <View style={styles.metricCard}>
             <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Gross Sales (GMV)</Text>
-              <DollarSign size={16} color={colors.primary} />
+              <Text style={styles.metricLabel}>Gross Merchandise Value</Text>
+              <DollarSign size={15} color={colors.primary} />
             </View>
             <Text style={styles.metricValue}>₹{currentStats.total_gmv?.toFixed(2) || '0.00'}</Text>
-            <Text style={styles.metricSub}>{currentStats.orders_count || 0} Orders Placed</Text>
+            <Text style={styles.metricSub}>{currentStats.orders_count || 0} Orders Recorded</Text>
           </View>
 
           {/* Collected */}
           <View style={styles.metricCard}>
             <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Collected Payment</Text>
-              <CheckCircle2 size={16} color={colors.accentEmerald} />
+              <Text style={styles.metricLabel}>Settled Collections</Text>
+              <CheckCircle2 size={15} color={colors.accentEmerald} />
             </View>
             <Text style={[styles.metricValue, { color: colors.accentEmerald }]}>
               ₹{currentStats.total_collected?.toFixed(2) || '0.00'}
             </Text>
-            <Text style={styles.metricSub}>{currentStats.collection_rate || 100}% Collection Rate</Text>
+            <Text style={styles.metricSub}>{currentStats.collection_rate || 100}% Collection Efficiency</Text>
           </View>
 
           {/* Outstanding */}
           <View style={styles.metricCard}>
             <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Outstanding / Pending</Text>
-              <Clock size={16} color={colors.accentAmber} />
+              <Text style={styles.metricLabel}>Outstanding Receivables</Text>
+              <Clock size={15} color={colors.accentAmber} />
             </View>
             <Text style={[styles.metricValue, { color: colors.accentAmber }]}>
               ₹{currentStats.total_outstanding?.toFixed(2) || '0.00'}
             </Text>
-            <Text style={styles.metricSub}>{currentStats.pending_orders_count || 0} Unpaid Orders</Text>
+            <Text style={styles.metricSub}>{currentStats.pending_orders_count || 0} Pending Settlement</Text>
           </View>
         </View>
 
         {/* Top Selling Products Bar */}
         {currentStats.top_products?.length > 0 && (
           <View style={styles.topProductsWrap}>
-            <Text style={styles.topProductsTitle}>🔥 Top Selling Items in this Period:</Text>
+            <Text style={styles.topProductsTitle}>Top Volume Products in Period:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
               {currentStats.top_products.map((tp, idx) => (
                 <View key={idx} style={styles.topProductChip}>
                   <Text style={styles.topProductRank}>#{idx + 1}</Text>
                   <Text style={styles.topProductName}>{tp.name.charAt(0).toUpperCase() + tp.name.slice(1)}</Text>
-                  <Text style={styles.topProductVol}>{tp.units} sold</Text>
+                  <Text style={styles.topProductVol}>{tp.units} units</Text>
                   <Text style={styles.topProductRev}>₹{tp.revenue.toFixed(2)}</Text>
                 </View>
               ))}
@@ -240,8 +253,8 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
       <View style={styles.sectionCard}>
         <View style={styles.ledgerHeader}>
           <View style={styles.titleWrap}>
-            <ShoppingCart size={18} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.sectionTitle}>Recorded Orders & Payments</Text>
+            <ShoppingCart size={16} color={colors.primary} style={{ marginRight: 8 }} />
+            <Text style={styles.sectionTitle}>Transaction Records</Text>
             <View style={styles.countPill}>
               <Text style={styles.countPillText}>{filteredSales.length}</Text>
             </View>
@@ -265,17 +278,17 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
 
         {/* Search Bar */}
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Search size={15} color={colors.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search by customer name, product item, or sale ID..."
+            placeholder="Search by customer name, product item, or transaction ID..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 6 }}>
-              <Text style={{ color: colors.textMuted }}>✕</Text>
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -284,10 +297,10 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
         <View style={styles.listContainer}>
           {filteredSales.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>📦</Text>
-              <Text style={styles.emptyTitle}>No orders matching filter</Text>
+              <PackageOpen size={32} color={colors.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={styles.emptyTitle}>No transaction records found</Text>
               <Text style={styles.emptySubtitle}>
-                Speak a sale (e.g. "2 coffee 60 rupaye") or adjust filters to view transactions.
+                No orders match your filter criteria. Record a sale or adjust filters to view transactions.
               </Text>
             </View>
           ) : (
@@ -308,79 +321,59 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
     gap: 16,
   },
   headerRowMobile: {
     flexDirection: 'column',
     alignItems: 'stretch',
   },
-  badgeHub: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 6,
-  },
-  badgeHubText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     maxWidth: 600,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#059669',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 8,
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   exportBtnText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
   },
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
     gap: 6,
   },
   refreshText: {
@@ -391,140 +384,137 @@ const styles = StyleSheet.create({
   spinning: {
     transform: [{ rotate: '45deg' }],
   },
-
-  // Period Switcher Card
   periodTabsCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderColor,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: 18,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   periodTabsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 12,
-    padding: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    padding: 3,
     borderWidth: 1,
     borderColor: colors.borderColor,
-    marginBottom: 16,
-    flexWrap: 'wrap',
+    marginBottom: 14,
   },
   periodTab: {
     flex: 1,
-    minWidth: 110,
-    paddingVertical: 8,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    justifyContent: 'center',
+    paddingVertical: 7,
+    borderRadius: 6,
   },
   periodTabActive: {
     backgroundColor: colors.primary,
   },
   periodTabText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textMuted,
   },
   periodTabTextActive: {
     color: '#ffffff',
+    fontWeight: '700',
   },
-
-  // Metrics Grid
   metricsRow: {
     flexDirection: 'row',
     gap: 12,
   },
   metricsRowMobile: {
     flexDirection: 'column',
+    gap: 10,
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.borderColor,
     padding: 14,
   },
   metricHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
   metricLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: 11,
     fontWeight: '600',
+    color: colors.textSecondary,
   },
   metricValue: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: 2,
+    letterSpacing: -0.3,
   },
   metricSub: {
     fontSize: 11,
     color: colors.textMuted,
+    marginTop: 4,
   },
-
-  // Top Products
   topProductsWrap: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    borderTopColor: colors.borderColor,
   },
   topProductsTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginBottom: 4,
   },
   topProductChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 8,
-    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginRight: 8,
   },
   topProductRank: {
-    color: colors.primary,
+    fontSize: 10,
     fontWeight: '800',
-    fontSize: 11,
+    color: colors.primary,
+    marginRight: 6,
   },
   topProductName: {
-    color: colors.textPrimary,
+    fontSize: 11,
     fontWeight: '700',
-    fontSize: 12,
+    color: colors.textPrimary,
+    marginRight: 8,
   },
   topProductVol: {
+    fontSize: 10,
     color: colors.textMuted,
-    fontSize: 11,
+    marginRight: 8,
   },
   topProductRev: {
-    color: colors.accentEmerald,
-    fontWeight: '700',
     fontSize: 11,
+    fontWeight: '700',
+    color: colors.accentEmerald,
   },
-
-  // Ledger Section
   sectionCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 20,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 18,
   },
   ledgerHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 14,
     flexWrap: 'wrap',
     gap: 10,
@@ -534,21 +524,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.textPrimary,
+    marginRight: 8,
   },
   countPill: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
-    marginLeft: 8,
   },
   countPillText: {
-    color: colors.primary,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   statusChipsRow: {
     flexDirection: 'row',
@@ -557,13 +547,13 @@ const styles = StyleSheet.create({
   statusChip: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
   statusChipActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   statusChipText: {
@@ -572,44 +562,35 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   statusChipTextActive: {
-    color: colors.primary,
+    color: '#ffffff',
     fontWeight: '700',
   },
-
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 10,
+    backgroundColor: '#0b0f19',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
     paddingHorizontal: 12,
-    marginBottom: 16,
-  },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: 8,
+    paddingVertical: 8,
+    marginBottom: 14,
   },
   searchInput: {
     flex: 1,
-    height: 40,
     color: colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
   },
-
   listContainer: {
-    width: '100%',
+    gap: 10,
   },
   emptyContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 36,
   },
-  emptyEmoji: {
-    fontSize: 36,
-    marginBottom: 10,
-  },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 4,
@@ -618,7 +599,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
-    maxWidth: 320,
-    lineHeight: 16,
+    maxWidth: 400,
   },
 });

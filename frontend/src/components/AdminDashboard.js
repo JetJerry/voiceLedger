@@ -10,6 +10,21 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
+import {
+  ShieldCheck,
+  Plus,
+  Globe,
+  CreditCard,
+  Clock,
+  Store,
+  Search,
+  Phone,
+  Radio,
+  CheckCircle2,
+  TrendingUp,
+  X,
+  AlertCircle,
+} from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { apiService } from '../services/apiService';
 
@@ -132,12 +147,9 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
       {/* 1. Header & Actions Bar */}
       <View style={[styles.titleRow, isMobile && styles.titleRowMobile]}>
         <View>
-          <View style={styles.badgeHub}>
-            <Text style={styles.badgeHubText}>⚡ Multi-Store Management</Text>
-          </View>
-          <Text style={styles.mainTitle}>Platform Admin Hub</Text>
+          <Text style={styles.mainTitle}>Platform Admin Supervision Hub</Text>
           <Text style={styles.subTitle}>
-            Oversee all registered shopkeepers, track total platform revenue, and switch active store contexts.
+            Multi-store oversight, settlement volumes, merchant context switching, and platform analytics.
           </Text>
         </View>
 
@@ -149,8 +161,8 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
           }}
           activeOpacity={0.8}
         >
-          <Text style={styles.onboardBtnIcon}>➕</Text>
-          <Text style={styles.onboardBtnText}>Onboard Shopkeeper</Text>
+          <Plus size={15} color="#ffffff" style={{ marginRight: 6 }} />
+          <Text style={styles.onboardBtnText}>Onboard Merchant</Text>
         </TouchableOpacity>
       </View>
 
@@ -158,38 +170,46 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
       <View style={[styles.metricsGrid, isMobile && styles.metricsGridMobile]}>
         <View style={[styles.kpiCard, isMobile ? styles.kpiFull : styles.kpiQuarter]}>
           <View style={styles.kpiHeader}>
-            <Text style={styles.kpiEmoji}>🌐</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
+              <Globe size={15} color={colors.primary} />
+            </View>
             <Text style={styles.kpiLabel}>Total Platform GMV</Text>
           </View>
           <Text style={styles.kpiValue}>{formatCurrency(metrics?.total_gmv)}</Text>
-          <Text style={styles.kpiSub}>Across all registered merchants</Text>
+          <Text style={styles.kpiSub}>Consolidated across all stores</Text>
         </View>
 
         <View style={[styles.kpiCard, isMobile ? styles.kpiFull : styles.kpiQuarter]}>
           <View style={styles.kpiHeader}>
-            <Text style={styles.kpiEmoji}>💳</Text>
-            <Text style={styles.kpiLabel}>Total Collected</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+              <CreditCard size={15} color={colors.accentEmerald} />
+            </View>
+            <Text style={styles.kpiLabel}>Settled Volume</Text>
           </View>
           <Text style={[styles.kpiValue, { color: colors.accentEmerald }]}>
             {formatCurrency(metrics?.total_collected)}
           </Text>
-          <Text style={styles.kpiSub}>{metrics?.collection_rate_percent || 100}% collection rate</Text>
+          <Text style={styles.kpiSub}>{metrics?.collection_rate_percent || 100}% settlement efficiency</Text>
         </View>
 
         <View style={[styles.kpiCard, isMobile ? styles.kpiFull : styles.kpiQuarter]}>
           <View style={styles.kpiHeader}>
-            <Text style={styles.kpiEmoji}>⏳</Text>
-            <Text style={styles.kpiLabel}>Total Outstanding</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+              <Clock size={15} color={colors.accentRose} />
+            </View>
+            <Text style={styles.kpiLabel}>Outstanding Balance</Text>
           </View>
           <Text style={[styles.kpiValue, { color: colors.accentRose }]}>
             {formatCurrency(metrics?.total_outstanding)}
           </Text>
-          <Text style={styles.kpiSub}>Unpaid receivables across platform</Text>
+          <Text style={styles.kpiSub}>Unsettled merchant balances</Text>
         </View>
 
         <View style={[styles.kpiCard, isMobile ? styles.kpiFull : styles.kpiQuarter]}>
           <View style={styles.kpiHeader}>
-            <Text style={styles.kpiEmoji}>🏪</Text>
+            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+              <Store size={15} color={colors.textSecondary} />
+            </View>
             <Text style={styles.kpiLabel}>Registered Stores</Text>
           </View>
           <View style={styles.vendorCountRow}>
@@ -198,14 +218,14 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
               <Text style={styles.activePillText}>{metrics?.active_merchants || 0} Active</Text>
             </View>
           </View>
-          <Text style={styles.kpiSub}>{metrics?.total_transactions || 0} total sales processed</Text>
+          <Text style={styles.kpiSub}>{metrics?.total_transactions || 0} total transactions processed</Text>
         </View>
       </View>
 
       {/* 3. Search & Filter Bar */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchInputWrapper}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Search size={15} color={colors.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search stores by name, category, or phone..."
@@ -215,7 +235,7 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearchBtn}>
-              <Text style={styles.clearSearchText}>✕</Text>
+              <Text style={styles.clearSearchText}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -251,14 +271,14 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
       {isLoading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading shopkeepers and platform metrics...</Text>
+          <Text style={styles.loadingText}>Loading merchant accounts...</Text>
         </View>
       ) : filteredMerchants.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyEmoji}>🏪</Text>
-          <Text style={styles.emptyTitle}>No shopkeepers found</Text>
+          <Store size={36} color={colors.textMuted} style={{ marginBottom: 8 }} />
+          <Text style={styles.emptyTitle}>No merchant accounts found</Text>
           <Text style={styles.emptySub}>
-            {searchQuery ? 'Try clearing your search filter.' : 'Click "Onboard Shopkeeper" to register your first store.'}
+            {searchQuery ? 'Try adjusting your search criteria.' : 'Click "Onboard Merchant" to register your first store.'}
           </Text>
         </View>
       ) : (
@@ -274,29 +294,22 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                 <View style={styles.mCardTop}>
                   <View style={styles.mStoreInfo}>
                     <View style={[styles.mAvatar, isCurrent && styles.mAvatarCurrent]}>
-                      <Text style={styles.mAvatarEmoji}>
-                        {m.business_type?.includes('Cafe') || m.business_type?.includes('Food')
-                          ? '☕'
-                          : m.business_type?.includes('Bakery') || m.business_type?.includes('Sweet')
-                          ? '🧁'
-                          : m.business_type?.includes('Stationery')
-                          ? '📚'
-                          : m.business_type?.includes('Dairy')
-                          ? '🥛'
-                          : '🛒'}
-                      </Text>
+                      <Store size={18} color={isCurrent ? colors.primary : colors.textSecondary} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <View style={styles.nameRow}>
-                        <Text style={styles.mName} numberOfLines={1}>
-                          {m.name}
-                        </Text>
-                      </View>
+                      <Text style={styles.mName} numberOfLines={1}>
+                        {m.name}
+                      </Text>
                       <View style={styles.tagRow}>
                         <View style={styles.catBadge}>
                           <Text style={styles.catBadgeText}>{m.business_type || 'Retail'}</Text>
                         </View>
-                        {m.phone ? <Text style={styles.phoneText}>📞 {m.phone}</Text> : null}
+                        {m.phone ? (
+                          <View style={styles.phoneRow}>
+                            <Phone size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
+                            <Text style={styles.phoneText}>{m.phone}</Text>
+                          </View>
+                        ) : null}
                       </View>
                     </View>
                   </View>
@@ -304,7 +317,8 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                   <View style={styles.statusPillWrapper}>
                     {isCurrent ? (
                       <View style={styles.currentActivePill}>
-                        <Text style={styles.currentActiveText}>🟢 Live Terminal</Text>
+                        <Radio size={11} color="#34d399" style={{ marginRight: 4 }} />
+                        <Text style={styles.currentActiveText}>Active Context</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -322,21 +336,21 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                 {/* Financial Summary */}
                 <View style={styles.mStatsGrid}>
                   <View style={styles.mStatItem}>
-                    <Text style={styles.mStatLabel}>Catalog Items</Text>
+                    <Text style={styles.mStatLabel}>Items</Text>
                     <Text style={styles.mStatValue}>{m.products_count || 0}</Text>
                   </View>
                   <View style={styles.mStatItem}>
-                    <Text style={styles.mStatLabel}>Sales Count</Text>
+                    <Text style={styles.mStatLabel}>Orders</Text>
                     <Text style={styles.mStatValue}>{m.total_sales_count || 0}</Text>
                   </View>
                   <View style={styles.mStatItem}>
-                    <Text style={styles.mStatLabel}>Gross Sales</Text>
+                    <Text style={styles.mStatLabel}>GMV</Text>
                     <Text style={[styles.mStatValue, { color: colors.textPrimary }]}>
                       {formatCurrency(m.total_sales_volume)}
                     </Text>
                   </View>
                   <View style={styles.mStatItem}>
-                    <Text style={styles.mStatLabel}>Collected</Text>
+                    <Text style={styles.mStatLabel}>Settled</Text>
                     <Text style={[styles.mStatValue, { color: colors.accentEmerald }]}>
                       {formatCurrency(m.total_collected)}
                     </Text>
@@ -346,7 +360,7 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                 {/* Collection Progress Bar */}
                 <View style={styles.progressContainer}>
                   <View style={styles.progressLabels}>
-                    <Text style={styles.progressLabelText}>Collection Rate</Text>
+                    <Text style={styles.progressLabelText}>Settlement Efficiency</Text>
                     <Text style={styles.progressPercentText}>{collectedPercent}%</Text>
                   </View>
                   <View style={styles.progressBarBg}>
@@ -361,11 +375,11 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                       style={styles.openTerminalBtn}
                       onPress={() => onSwitchToTerminal && onSwitchToTerminal(m)}
                     >
-                      <Text style={styles.openTerminalBtnText}>🎙️ Open Store Terminal</Text>
+                      <Text style={styles.openTerminalBtnText}>Open Merchant Terminal</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity style={styles.switchStoreBtn} onPress={() => handleSetActiveStore(m)}>
-                      <Text style={styles.switchStoreBtnText}>⚡ Switch Active Store</Text>
+                      <Text style={styles.switchStoreBtnText}>Switch Store Context</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -381,17 +395,18 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
           <View style={[styles.modalCard, isMobile && styles.modalCardMobile]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Onboard New Shopkeeper</Text>
-                <Text style={styles.modalSub}>Register a new store / vendor context on VoiceLedger</Text>
+                <Text style={styles.modalTitle}>Onboard Merchant Account</Text>
+                <Text style={styles.modalSub}>Register an isolated merchant store context on VoiceLedger</Text>
               </View>
               <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalCloseText}>✕</Text>
+                <X size={18} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             {formError ? (
               <View style={styles.errorBox}>
-                <Text style={styles.errorText}>⚠️ {formError}</Text>
+                <AlertCircle size={15} color={colors.accentRose} style={{ marginRight: 8 }} />
+                <Text style={styles.errorText}>{formError}</Text>
               </View>
             ) : null}
 
@@ -400,7 +415,7 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
               <Text style={styles.inputLabel}>Store / Business Name *</Text>
               <TextInput
                 style={styles.formInput}
-                placeholder="e.g. Royal Men's Apparel & Shoes"
+                placeholder="e.g. Royal Apparel & Footwear"
                 placeholderTextColor={colors.textMuted}
                 value={newStoreName}
                 onChangeText={setNewStoreName}
@@ -458,7 +473,7 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.submitBtnText}>Register Store</Text>
+                  <Text style={styles.submitBtnText}>Create Account</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -472,13 +487,13 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
+    marginBottom: 18,
     gap: 16,
     flexWrap: 'wrap',
   },
@@ -486,78 +501,52 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
   },
-  badgeHub: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-  },
-  badgeHubText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
   mainTitle: {
-    fontSize: 26,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    letterSpacing: -0.4,
+    marginBottom: 2,
   },
   subTitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: colors.textSecondary,
     maxWidth: 650,
-    lineHeight: 20,
+    lineHeight: 16,
   },
   onboardBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-  },
-  onboardBtnIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   onboardBtnText: {
     color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 12,
   },
-
-  // KPI Grid
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 16,
   },
   metricsGridMobile: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 10,
   },
   kpiCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 18,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
   },
   kpiQuarter: {
     flex: 1,
-    minWidth: 220,
+    minWidth: 200,
   },
   kpiFull: {
     width: '100%',
@@ -567,347 +556,327 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  kpiEmoji: {
-    fontSize: 18,
+  kpiIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 8,
   },
   kpiLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textSecondary,
   },
   kpiValue: {
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   kpiSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     marginTop: 4,
   },
   vendorCountRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   activePill: {
     backgroundColor: colors.badgePaidBg,
     borderColor: colors.badgePaidBorder,
     borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
   },
   activePillText: {
     color: colors.badgePaidText,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
-
-  // Search & Filter Bar
   searchBarContainer: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 16,
-    marginBottom: 24,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 14,
+    marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 10,
+    backgroundColor: '#0b0f19',
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    paddingHorizontal: 10,
+    marginBottom: 10,
   },
   searchInput: {
     flex: 1,
-    height: 44,
+    height: 38,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 12,
   },
   clearSearchBtn: {
-    padding: 6,
+    padding: 4,
   },
   clearSearchText: {
     color: colors.textMuted,
-    fontSize: 14,
+    fontSize: 11,
   },
   filterScroll: {
     flexDirection: 'row',
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginRight: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    marginRight: 6,
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
   filterChipActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    borderColor: colors.primary,
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    borderColor: '#7c3aed',
   },
   filterChipText: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: colors.primary,
+    color: '#c4b5fd',
     fontWeight: '700',
   },
-
-  // Merchant Cards Grid
   merchantGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 12,
   },
   merchantGridMobile: {
     flexDirection: 'column',
   },
   merchantCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 18,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 20,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
     flex: 1,
-    minWidth: 320,
-    maxWidth: '100%',
+    minWidth: 280,
+    maxWidth: '49%',
   },
   merchantCardCurrent: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(28, 36, 60, 0.9)',
+    borderColor: '#7c3aed',
+    backgroundColor: '#131b2e',
   },
   mCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 12,
+    gap: 10,
   },
   mStoreInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    gap: 10,
   },
   mAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
   mAvatarCurrent: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderColor: colors.primary,
-  },
-  mAvatarEmoji: {
-    fontSize: 22,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderColor: '#7c3aed',
   },
   mName: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   tagRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 2,
     flexWrap: 'wrap',
   },
   catBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   catBadgeText: {
     color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   phoneText: {
     color: colors.textMuted,
-    fontSize: 11,
+    fontSize: 10,
   },
   statusPillWrapper: {
     alignItems: 'flex-end',
   },
   currentActivePill: {
-    backgroundColor: colors.badgePaidBg,
-    borderColor: colors.badgePaidBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
     borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   currentActiveText: {
-    color: colors.badgePaidText,
-    fontSize: 11,
-    fontWeight: '800',
+    color: '#34d399',
+    fontSize: 10,
+    fontWeight: '700',
   },
   statusToggle: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   statusToggleInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderColor: colors.borderColor,
   },
   statusToggleText: {
     color: colors.badgePaidText,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
   },
   statusToggleTextInactive: {
     color: colors.textMuted,
   },
-
-  // Stats Grid inside Card
   mStatsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 14,
+    backgroundColor: '#0b0f19',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
   },
   mStatItem: {
     alignItems: 'center',
   },
   mStatLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textMuted,
     marginBottom: 2,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   mStatValue: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
-
-  // Progress Bar
   progressContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   progressLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   progressLabelText: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textMuted,
-    fontWeight: '600',
   },
   progressPercentText: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textSecondary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   progressBarBg: {
-    height: 6,
+    height: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 99,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: colors.accentEmerald,
-    borderRadius: 99,
+    borderRadius: 2,
   },
-
-  // Actions
   mCardActions: {
-    marginTop: 4,
+    marginTop: 2,
   },
   switchStoreBtn: {
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    borderColor: 'rgba(124, 58, 237, 0.25)',
     borderWidth: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 6,
     alignItems: 'center',
   },
   switchStoreBtnText: {
-    color: colors.primary,
-    fontWeight: '700',
-    fontSize: 13,
+    color: '#c4b5fd',
+    fontWeight: '600',
+    fontSize: 11,
   },
   openTerminalBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 7,
+    borderRadius: 6,
     alignItems: 'center',
   },
   openTerminalBtnText: {
     color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 13,
+    fontWeight: '700',
+    fontSize: 11,
   },
-
-  // Loading & Empty States
   loadingBox: {
-    padding: 60,
+    padding: 40,
     alignItems: 'center',
   },
   loadingText: {
     color: colors.textSecondary,
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: 8,
+    fontSize: 12,
   },
   emptyBox: {
-    padding: 50,
+    padding: 40,
     alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 4,
   },
   emptySub: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
@@ -916,13 +885,13 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalCard: {
-    backgroundColor: '#121826',
-    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 24,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 20,
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 480,
   },
   modalCardMobile: {
     maxWidth: '100%',
@@ -931,109 +900,104 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
   modalSub: {
-    fontSize: 13,
+    fontSize: 11,
     color: colors.textMuted,
     marginTop: 2,
   },
   modalCloseBtn: {
     padding: 4,
   },
-  modalCloseText: {
-    color: colors.textMuted,
-    fontSize: 18,
-  },
   errorBox: {
-    backgroundColor: 'rgba(244, 63, 94, 0.15)',
-    borderColor: 'rgba(244, 63, 94, 0.3)',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 12,
   },
   errorText: {
-    color: colors.accentRose,
-    fontSize: 13,
-    fontWeight: '600',
+    color: '#fb7185',
+    fontSize: 12,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textSecondary,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   formInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#0b0f19',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 46,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    height: 38,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 12,
   },
   catSelectorScroll: {
     flexDirection: 'row',
   },
   catSelectChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderColor: colors.borderColor,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 6,
   },
   catSelectChipActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.2)',
-    borderColor: colors.primary,
+    backgroundColor: 'rgba(124, 58, 237, 0.2)',
+    borderColor: '#7c3aed',
   },
   catSelectChipText: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
   },
   catSelectChipTextActive: {
-    color: colors.primary,
+    color: '#c4b5fd',
     fontWeight: '700',
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 10,
+    gap: 8,
+    marginTop: 8,
   },
   cancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   cancelBtnText: {
     color: colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '600',
   },
   submitBtn: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 10,
-    minWidth: 120,
+    backgroundColor: '#7c3aed',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
     alignItems: 'center',
   },
   submitBtnText: {
     color: '#ffffff',
-    fontWeight: '800',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 12,
   },
 });

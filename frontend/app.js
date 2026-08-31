@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
   Platform,
 } from 'react-native';
+import { Volume2, Receipt, Package, ArrowRight, X } from 'lucide-react-native';
 import { colors } from './src/theme/colors';
 import { apiService } from './src/services/apiService';
 import { voiceService } from './src/services/voiceService';
@@ -76,7 +77,7 @@ export default function App() {
         for (const ann of announcements) {
           // Set visual alert
           setSoundboxAlert(ann);
-          // Play Neural TTS Voice Announcement aloud!
+          // Play Neural TTS Voice Announcement aloud
           if (ann.audio_base64 || ann.speech_text) {
             voiceService.playTTSAudio(ann.audio_base64, ann.speech_text);
           }
@@ -156,11 +157,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.rootContainer}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgDark} />
-
-      {/* Background Ambient Glows */}
-      <View style={[styles.ambientGlow, styles.glow1]} pointerEvents="none" />
-      <View style={[styles.ambientGlow, styles.glow2]} pointerEvents="none" />
+      <StatusBar barStyle="light-content" backgroundColor="#0b0f19" />
 
       {/* Fixed App Header with Nav Tabs & Logout */}
       <Header
@@ -175,10 +172,12 @@ export default function App() {
       {soundboxAlert && (
         <View style={styles.soundboxBanner}>
           <View style={styles.soundboxLeft}>
-            <Text style={styles.soundboxIcon}>🔊 💰</Text>
+            <View style={styles.soundboxIconBadge}>
+              <Volume2 size={16} color="#34d399" />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.soundboxTitle}>
-                Payment Confirmed: ₹{soundboxAlert.amount} for {soundboxAlert.items_summary}
+                Payment Settled: ₹{soundboxAlert.amount} for {soundboxAlert.items_summary}
               </Text>
               <Text style={styles.soundboxSpeech}>{soundboxAlert.speech_text}</Text>
             </View>
@@ -189,14 +188,15 @@ export default function App() {
               onPress={() => voiceService.playTTSAudio(soundboxAlert.audio_base64, soundboxAlert.speech_text)}
               activeOpacity={0.8}
             >
-              <Text style={styles.soundboxReplayText}>🔊 Replay</Text>
+              <Volume2 size={13} color="#ffffff" style={{ marginRight: 4 }} />
+              <Text style={styles.soundboxReplayText}>Replay Voice</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.soundboxDismissBtn}
               onPress={() => setSoundboxAlert(null)}
               activeOpacity={0.7}
             >
-              <Text style={styles.soundboxDismissText}>✕</Text>
+              <X size={14} color="#e2e8f0" />
             </TouchableOpacity>
           </View>
         </View>
@@ -218,7 +218,7 @@ export default function App() {
           />
         }
       >
-        {/* PAGE 1: 🎙️ Simple, Clean Voice Dashboard */}
+        {/* PAGE 1: Simple, Clean Voice Dashboard */}
         {currentView === 'terminal' && (
           <View style={styles.pageWrap}>
             {/* Hero Voice Assistant Card */}
@@ -235,15 +235,15 @@ export default function App() {
                 activeOpacity={0.8}
               >
                 <View style={styles.quickNavIconWrap}>
-                  <Text style={styles.quickNavIcon}>🧾</Text>
+                  <Receipt size={20} color={colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quickNavTitle}>Sales & Payment Ledger</Text>
+                  <Text style={styles.quickNavTitle}>Sales & Payment Settlement Ledger</Text>
                   <Text style={styles.quickNavSub}>
-                    View {summaryData?.total_transactions || 0} recorded orders, check payment arrival, and verify Razorpay links.
+                    View {summaryData?.total_transactions || 0} recorded orders, track live settlements, and verify payment links.
                   </Text>
                 </View>
-                <Text style={styles.quickNavArrow}>→</Text>
+                <ArrowRight size={18} color={colors.primary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -251,22 +251,22 @@ export default function App() {
                 onPress={() => setCurrentView('catalog')}
                 activeOpacity={0.8}
               >
-                <View style={[styles.quickNavIconWrap, { backgroundColor: 'rgba(6, 182, 212, 0.15)' }]}>
-                  <Text style={styles.quickNavIcon}>📦</Text>
+                <View style={[styles.quickNavIconWrap, { backgroundColor: 'rgba(6, 182, 212, 0.12)' }]}>
+                  <Package size={20} color={colors.accentCyan} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.quickNavTitle}>Store Menu & Items</Text>
+                  <Text style={styles.quickNavTitle}>Product Catalog & Inventory</Text>
                   <Text style={styles.quickNavSub}>
-                    Add items with dynamic attributes (Fruits, Medicines, Kirana, Cafe, Clothes, Hardware).
+                    Manage items with dynamic attributes across grocery, pharmacy, food, fashion, and hardware.
                   </Text>
                 </View>
-                <Text style={styles.quickNavArrow}>→</Text>
+                <ArrowRight size={18} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* PAGE 2: 🧾 Dedicated Sales & Payments Ledger */}
+        {/* PAGE 2: Dedicated Sales & Payments Ledger */}
         {currentView === 'sales' && (
           <View style={styles.pageWrap}>
             <SalesLedger
@@ -278,31 +278,27 @@ export default function App() {
           </View>
         )}
 
-        {/* PAGE 3: 📦 Dedicated Store Menu & Catalog Manager */}
+        {/* PAGE 3: Dedicated Dynamic Product Catalog & Menu Manager */}
         {currentView === 'catalog' && (
           <View style={styles.pageWrap}>
             <CatalogManager onCatalogUpdated={loadDashboard} />
           </View>
         )}
 
-        {/* PAGE 4: ⚡ Dedicated Admin Multi-Merchant Hub */}
+        {/* PAGE 4: Multi-Store Platform Super Administrator */}
         {currentView === 'admin' && (
           <View style={styles.pageWrap}>
             <AdminDashboard
-              onSwitchToTerminal={(merchant) => {
-                setActiveStore(merchant);
-                setCurrentView('terminal');
-                loadDashboard();
-              }}
+              onSwitchToTerminal={() => setCurrentView('terminal')}
               onRefreshApp={loadDashboard}
             />
           </View>
         )}
 
-        {/* Footer */}
+        {/* Global Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            VoiceLedger — Universal React Native Multi-Domain Store Assistant
+            VoiceLedger Enterprise • Razorpay Unified Settlement Engine
           </Text>
         </View>
       </ScrollView>
@@ -322,32 +318,15 @@ export default function App() {
 const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
-    backgroundColor: colors.bgDark,
-    position: 'relative',
-  },
-  ambientGlow: {
-    position: 'absolute',
-    borderRadius: 999,
-  },
-  glow1: {
-    top: -50,
-    left: '15%',
-    width: 380,
-    height: 380,
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-  },
-  glow2: {
-    bottom: 50,
-    right: -50,
-    width: 420,
-    height: 420,
-    backgroundColor: 'rgba(139, 92, 246, 0.06)',
+    backgroundColor: '#0b0f19',
+    minHeight: '100vh',
+    width: '100%',
   },
   scrollContainer: {
     flex: 1,
   },
   scrollContent: {
-    paddingVertical: 24,
+    paddingVertical: 20,
     paddingHorizontal: 16,
     alignSelf: 'center',
     width: '100%',
@@ -358,104 +337,92 @@ const styles = StyleSheet.create({
   },
   scrollContentMobile: {
     maxWidth: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
   },
   footer: {
-    paddingVertical: 20,
+    paddingVertical: 18,
     alignItems: 'center',
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     textAlign: 'center',
   },
-
-  // Restructured Page Containers & Quick Nav
   pageWrap: {
     width: '100%',
   },
   quickNavRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 24,
+    gap: 14,
+    marginBottom: 20,
   },
   quickNavRowMobile: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 10,
   },
   quickNavCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.borderColor,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     padding: 16,
   },
   quickNavIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  quickNavIcon: {
-    fontSize: 22,
-  },
   quickNavTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 2,
   },
   quickNavSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
-    lineHeight: 16,
+    lineHeight: 15,
   },
-  quickNavArrow: {
-    fontSize: 20,
-    color: colors.primary,
-    fontWeight: '800',
-    marginLeft: 10,
-  },
-
-  // ── Live Voice Soundbox Banner ──
   soundboxBanner: {
     backgroundColor: '#064e3b',
     borderBottomWidth: 1,
     borderBottomColor: '#059669',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 100,
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
   },
   soundboxLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    gap: 10,
   },
-  soundboxIcon: {
-    fontSize: 24,
+  soundboxIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   soundboxTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#34d399',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   soundboxSpeech: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#e2e8f0',
     fontStyle: 'italic',
   },
@@ -466,27 +433,24 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   soundboxReplayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#059669',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   soundboxReplayText: {
     color: '#ffffff',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   soundboxDismissBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  soundboxDismissText: {
-    color: '#e2e8f0',
-    fontSize: 13,
-    fontWeight: '700',
   },
 });

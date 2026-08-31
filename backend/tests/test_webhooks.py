@@ -94,7 +94,7 @@ def test_webhook_valid_signature_accepted(client, db_session, monkeypatch):
         db_session,
         SaleCreate(
             customer_name="Aarav",
-            items=[SaleItemCreate(product_name="tea", quantity=1)]
+            items=[SaleItemCreate(product_name="chai", quantity=1)]
         )
     )
 

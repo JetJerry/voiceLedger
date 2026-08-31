@@ -1,6 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, useWindowDimensions, ScrollView } from 'react-native';
-import { Mic, Settings, Wifi, CheckCircle2, Sparkles } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  useWindowDimensions,
+  ScrollView,
+} from 'react-native';
+import {
+  Mic,
+  Settings,
+  ShieldCheck,
+  Receipt,
+  Package,
+  LogOut,
+  Store,
+  Zap,
+} from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { getApiBase, setCustomApiBase } from '../config/api';
 
@@ -30,58 +48,58 @@ export default function Header({
       <View style={styles.topRow}>
         {/* Brand Group */}
         <View style={styles.brandGroup}>
-          <View style={[styles.logoBadge, isAdmin && { backgroundColor: '#8b5cf6' }]}>
-            <Mic size={22} color="#ffffff" strokeWidth={2.5} />
+          <View style={[styles.logoBadge, isAdmin && styles.logoBadgeAdmin]}>
+            <Mic size={20} color="#ffffff" strokeWidth={2.5} />
           </View>
           <View style={styles.titleWrap}>
             <View style={styles.brandTitleRow}>
               <Text style={styles.appName}>VoiceLedger</Text>
               {isAdmin ? (
-                <View style={[styles.storeBadge, { backgroundColor: 'rgba(139, 92, 246, 0.2)', borderColor: '#8b5cf6' }]}>
-                  <Text style={[styles.storeBadgeText, { color: '#c4b5fd' }]}>
-                    ⚡ Platform Super Admin
-                  </Text>
+                <View style={styles.adminBadge}>
+                  <ShieldCheck size={12} color="#a78bfa" style={{ marginRight: 4 }} />
+                  <Text style={styles.adminBadgeText}>Platform Admin</Text>
                 </View>
               ) : currentUser?.name ? (
                 <View style={styles.storeBadge}>
+                  <Store size={12} color={colors.primary} style={{ marginRight: 4 }} />
                   <Text style={styles.storeBadgeText} numberOfLines={1}>
-                    🏪 {currentUser.name}
+                    {currentUser.name}
                   </Text>
                 </View>
               ) : null}
             </View>
             <Text style={styles.appSubtitle} numberOfLines={1}>
               {isAdmin
-                ? 'Multi-Store Supervision & Live Payment Reconciliation'
-                : 'Voice-First Sales & Payment Arrival Verification'}
+                ? 'Multi-Store Supervision & Live Settlement Hub'
+                : 'Intelligent Voice Settlement & Revenue Engine'}
             </Text>
           </View>
         </View>
 
-        {/* Role-Specific Navigation Tabs */}
+        {/* Navigation Tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.navTabsScroll}>
           <View style={styles.navTabs}>
             {isAdmin ? (
-              /* Admin Navigation Tab */
               <TouchableOpacity
                 style={[styles.navTab, currentView === 'admin' && styles.navTabAdminActive]}
                 onPress={() => onSelectView && onSelectView('admin')}
                 activeOpacity={0.8}
               >
+                <Zap size={14} color={currentView === 'admin' ? '#ffffff' : colors.textSecondary} style={{ marginRight: 6 }} />
                 <Text style={[styles.navTabText, currentView === 'admin' && styles.navTabTextActive]}>
-                  ⚡ Multi-Vendor Admin Hub
+                  Multi-Vendor Admin Hub
                 </Text>
               </TouchableOpacity>
             ) : (
-              /* Shopkeeper Navigation Tabs (Strictly no admin tabs in merchant terminal) */
               <>
                 <TouchableOpacity
                   style={[styles.navTab, currentView === 'terminal' && styles.navTabActive]}
                   onPress={() => onSelectView && onSelectView('terminal')}
                   activeOpacity={0.8}
                 >
+                  <Mic size={14} color={currentView === 'terminal' ? '#ffffff' : colors.textSecondary} style={{ marginRight: 6 }} />
                   <Text style={[styles.navTabText, currentView === 'terminal' && styles.navTabTextActive]}>
-                    🎙️ Voice Terminal
+                    Voice Terminal
                   </Text>
                 </TouchableOpacity>
 
@@ -90,8 +108,9 @@ export default function Header({
                   onPress={() => onSelectView && onSelectView('sales')}
                   activeOpacity={0.8}
                 >
+                  <Receipt size={14} color={currentView === 'sales' ? '#ffffff' : colors.textSecondary} style={{ marginRight: 6 }} />
                   <Text style={[styles.navTabText, currentView === 'sales' && styles.navTabTextActive]}>
-                    🧾 Sales & Payments
+                    Sales & Ledger
                   </Text>
                 </TouchableOpacity>
 
@@ -100,8 +119,9 @@ export default function Header({
                   onPress={() => onSelectView && onSelectView('catalog')}
                   activeOpacity={0.8}
                 >
+                  <Package size={14} color={currentView === 'catalog' ? '#ffffff' : colors.textSecondary} style={{ marginRight: 6 }} />
                   <Text style={[styles.navTabText, currentView === 'catalog' && styles.navTabTextActive]}>
-                    📦 Menu & Items
+                    Product Catalog
                   </Text>
                 </TouchableOpacity>
               </>
@@ -109,40 +129,42 @@ export default function Header({
           </View>
         </ScrollView>
 
-        {/* Status Badges, Settings & Logout */}
+        {/* Right Actions: Test Badge, Settings, Logout */}
         <View style={styles.badgesContainer}>
           {!isMobile && (
-            <View style={[styles.pill, styles.pillRzp]}>
+            <View style={styles.pillRzp}>
               <View style={styles.dotLive} />
-              <Text style={styles.pillText}>Razorpay Test</Text>
+              <Text style={styles.pillText}>Razorpay Test Mode</Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={styles.settingsBtn}
+            style={styles.iconButton}
             onPress={() => {
               setApiUrlInput(getApiBase());
               setSettingsModalVisible(true);
             }}
             activeOpacity={0.7}
+            accessibilityLabel="API Settings"
           >
-            <Settings size={18} color={colors.textSecondary} />
+            <Settings size={16} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Logout Button */}
           {onLogout && (
             <TouchableOpacity
               style={styles.logoutBtn}
               onPress={onLogout}
               activeOpacity={0.8}
+              accessibilityLabel="Sign out"
             >
-              <Text style={styles.logoutBtnText}>🚪 Logout</Text>
+              <LogOut size={14} color={colors.accentRose} style={{ marginRight: 5 }} />
+              <Text style={styles.logoutBtnText}>Logout</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Settings Modal (For setting backend IP on physical phones) */}
+      {/* Settings Modal */}
       <Modal
         visible={settingsModalVisible}
         transparent
@@ -151,16 +173,19 @@ export default function Header({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>⚙️ Backend API Configuration</Text>
+            <View style={styles.modalHeaderRow}>
+              <Settings size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.modalTitle}>Backend API Configuration</Text>
+            </View>
             <Text style={styles.modalDesc}>
-              When running on a physical smartphone with Expo Go, enter your computer's local Wi-Fi IP address (e.g. http://192.168.1.5:8000/api):
+              Specify your server endpoint URL (e.g. Modal cloud deployment or local development server):
             </Text>
 
             <TextInput
               style={styles.ipInput}
               value={apiUrlInput}
               onChangeText={setApiUrlInput}
-              placeholder="http://192.168.1.X:8000/api"
+              placeholder="https://your-workspace.modal.run/api"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
@@ -189,11 +214,11 @@ export default function Header({
 
 const styles = StyleSheet.create({
   headerContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
-    backgroundColor: 'rgba(10, 14, 23, 0.85)',
+    backgroundColor: '#0d131f',
   },
   topRow: {
     flexDirection: 'row',
@@ -209,18 +234,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
+  },
+  logoBadgeAdmin: {
+    backgroundColor: '#7c3aed',
   },
   titleWrap: {
     flex: 1,
@@ -232,95 +255,127 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   appName: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.textPrimary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   storeBadge: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: 'rgba(99, 102, 241, 0.25)',
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   storeBadgeText: {
-    color: colors.primary,
+    color: '#a5b4fc',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.15)',
+    borderColor: 'rgba(124, 58, 237, 0.3)',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  adminBadgeText: {
+    color: '#c4b5fd',
     fontSize: 11,
     fontWeight: '700',
   },
   appSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
+    fontSize: 11,
+    color: colors.textMuted,
     marginTop: 2,
+  },
+  navTabsScroll: {
+    marginHorizontal: 12,
   },
   navTabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 10,
     padding: 3,
     borderWidth: 1,
     borderColor: colors.borderColor,
-    marginHorizontal: 12,
   },
   navTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 9,
+    paddingVertical: 7,
+    borderRadius: 8,
   },
   navTabActive: {
     backgroundColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+  },
+  navTabAdminActive: {
+    backgroundColor: '#7c3aed',
   },
   navTabText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: colors.textSecondary,
   },
   navTabTextActive: {
     color: '#ffffff',
+    fontWeight: '700',
   },
   badgesContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  pill: {
+  pillRzp: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
     borderWidth: 1,
-  },
-  pillRzp: {
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  pillAi: {
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    borderColor: 'rgba(99, 102, 241, 0.3)',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.25)',
   },
   dotLive: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#10b981',
     marginRight: 6,
   },
   pillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    color: '#6ee7b7',
+    color: '#34d399',
   },
-  settingsBtn: {
+  iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(244, 63, 94, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.25)',
+  },
+  logoutBtnText: {
+    color: colors.accentRose,
+    fontSize: 12,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -332,33 +387,37 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: '#121826',
+    backgroundColor: '#111827',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.borderColor,
     padding: 24,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
   modalDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     lineHeight: 18,
     marginBottom: 16,
   },
   ipInput: {
-    backgroundColor: '#0a0e17',
+    backgroundColor: '#0b0f19',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
     marginBottom: 20,
   },
   modalBtnRow: {
@@ -367,8 +426,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   btn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -379,31 +438,14 @@ const styles = StyleSheet.create({
   btnCancelText: {
     color: colors.textSecondary,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 12,
   },
   btnSave: {
     backgroundColor: colors.primary,
   },
   btnSaveText: {
     color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  navTabAdminActive: {
-    backgroundColor: '#8b5cf6',
-  },
-  logoutBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: 'rgba(244, 63, 94, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.3)',
-    marginLeft: 6,
-  },
-  logoutBtnText: {
-    color: colors.accentRose,
-    fontSize: 12,
     fontWeight: '700',
+    fontSize: 12,
   },
 });

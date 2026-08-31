@@ -33,7 +33,15 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
       <View style={styles.topRow}>
         <View style={styles.infoCol}>
           <Text style={styles.itemTitle}>{itemsSummary}</Text>
-          <Text style={styles.saleId}>Sale #{sale.id.slice(0, 8)}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.saleId}>Ref #{sale.id.slice(0, 8)}</Text>
+            {sale.customer_name && (
+              <>
+                <Text style={styles.metaDot}>•</Text>
+                <Text style={styles.customerName}>{sale.customer_name}</Text>
+              </>
+            )}
+          </View>
         </View>
         <View style={[styles.badge, badgeStyle]}>
           <Text style={[styles.badgeText, badgeTextStyle]}>{statusLabel}</Text>
@@ -42,18 +50,18 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
 
       <View style={styles.financialRow}>
         <View style={styles.finCol}>
-          <Text style={styles.finLabel}>Expected</Text>
+          <Text style={styles.finLabel}>Order Total</Text>
           <Text style={styles.finValue}>₹{sale.total_amount.toFixed(2)}</Text>
         </View>
         <View style={styles.finCol}>
-          <Text style={styles.finLabel}>Received</Text>
+          <Text style={styles.finLabel}>Settled</Text>
           <Text style={[styles.finValue, { color: colors.accentEmerald }]}>
             ₹{sale.received_amount.toFixed(2)}
           </Text>
         </View>
         <View style={styles.finCol}>
-          <Text style={styles.finLabel}>Outstanding</Text>
-          <Text style={[styles.finValue, sale.outstanding_amount > 0 && { color: colors.accentRose }]}>
+          <Text style={styles.finLabel}>Balance Due</Text>
+          <Text style={[styles.finValue, sale.outstanding_amount > 0 ? { color: colors.accentRose } : { color: colors.textSecondary }]}>
             ₹{sale.outstanding_amount.toFixed(2)}
           </Text>
         </View>
@@ -62,8 +70,8 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
       <View style={styles.actionsRow}>
         {sale.razorpay_payment_link_url ? (
           <TouchableOpacity style={styles.btnRzp} onPress={handleOpenRzpLink} activeOpacity={0.8}>
-            <CreditCard size={14} color="#a5b4fc" style={{ marginRight: 6 }} />
-            <Text style={styles.btnRzpText}>Pay Link</Text>
+            <ExternalLink size={13} color="#a5b4fc" style={{ marginRight: 5 }} />
+            <Text style={styles.btnRzpText}>Payment Link</Text>
           </TouchableOpacity>
         ) : null}
 
@@ -73,8 +81,8 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
             onPress={() => onSimulatePayment(sale)}
             activeOpacity={0.8}
           >
-            <Zap size={14} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={styles.btnSimText}>Pay Simulate</Text>
+            <Zap size={13} color="#ffffff" style={{ marginRight: 5 }} />
+            <Text style={styles.btnSimText}>Simulate Settlement</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -84,43 +92,56 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: '#0d131f',
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 10,
+    padding: 14,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   infoCol: {
     flex: 1,
     marginRight: 10,
   },
   itemTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 2,
+    marginBottom: 3,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   saleId: {
     fontSize: 11,
     color: colors.textMuted,
     fontFamily: 'monospace',
   },
+  metaDot: {
+    color: colors.textMuted,
+    marginHorizontal: 6,
+    fontSize: 10,
+  },
+  customerName: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
   badgePaid: {
     backgroundColor: colors.badgePaidBg,
@@ -145,22 +166,25 @@ const styles = StyleSheet.create({
   },
   financialRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(10, 14, 23, 0.5)',
-    borderRadius: 10,
+    backgroundColor: '#080c14',
+    borderRadius: 8,
     padding: 10,
     justifyContent: 'space-around',
-    marginBottom: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.03)',
   },
   finCol: {
     alignItems: 'center',
   },
   finLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textMuted,
     marginBottom: 2,
+    fontWeight: '500',
   },
   finValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
   },
@@ -172,28 +196,28 @@ const styles = StyleSheet.create({
   btnRzp: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(99, 102, 241, 0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   btnRzpText: {
-    fontSize: 12,
-    color: '#c7d2fe',
+    fontSize: 11,
+    color: '#a5b4fc',
     fontWeight: '600',
   },
   btnSim: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   btnSimText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#ffffff',
     fontWeight: '600',
   },

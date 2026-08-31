@@ -14,6 +14,7 @@ aiosqlite>=0.22.1
 
 # ── AI / LLM ──
 google-genai>=2.20.0
+groq>=0.18.0
 
 # ── HuggingFace Models (STT + TTS) ──
 transformers>=5.16.1

@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from backend.app.config import settings
 from backend.app.schemas.voice import VoiceExtractionResult, VoiceItemExtracted
@@ -46,6 +46,96 @@ DEVANAGARI_PRODUCT_MAP = {
     "दाल मखनी": "dal makhani",
     "बटर चिकन": "butter chicken",
 }
+
+
+def _build_extraction_prompt(
+    text: str,
+    catalog_items: Optional[List[str]] = None,
+    merchant_profile: Optional[dict] = None,
+    business_type: Optional[str] = None,
+    context: str = "terminal",
+) -> str:
+    catalog_prompt = (
+        f"Merchant Store Product Catalog (ONLY use these exact names for sales): {', '.join(catalog_items)}"
+        if catalog_items
+        else "Merchant Store Product Catalog: EMPTY — no products yet. Do NOT invent products for record_sale."
+    )
+    profile_prompt = f"Merchant Profile: {json.dumps(merchant_profile, default=str)}" if merchant_profile else ""
+    business_prompt = f"Business Type: {business_type}" if business_type else ""
+    context_hint = (
+        "Context: catalog/menu management tab — prioritize add_to_catalog, list_catalog, search_catalog intents."
+        if context == "catalog"
+        else "Context: voice terminal for sales and payments."
+    )
+
+    return f"""
+You are VoiceLedger AI, an intelligent financial voice assistant for Indian retail shopkeepers.
+Analyze what the merchant spoke in Hindi, Hinglish, or English:
+"{text}"
+
+{catalog_prompt}
+{profile_prompt}
+{business_prompt}
+{context_hint}
+
+STRICT RULES (anti-hallucination):
+- For "record_sale": ONLY include items that exist in the catalog list above OR were explicitly named with a spoken price.
+- NEVER invent product names, quantities, or prices not mentioned in speech.
+- For financial queries (pending, daily sales): set intent to query_pending or query_daily — do NOT make up numbers in explanation.
+- If catalog is empty and user wants to sell, use intent "general_qa" and explain they must add products first.
+- Match catalog names exactly (case-insensitive). Fuzzy match only for obvious Hindi/English variants (chai=tea).
+
+Classify the intent into one of:
+1. "record_sale" -> Selling catalog items (e.g. "2 chai 40 rs", "1 burger becha")
+2. "add_to_catalog" -> Adding new items (e.g. "menu mein butter chicken add karo 350 rupaye")
+3. "list_catalog" -> Show all menu/catalog items (e.g. "menu dikhao", "catalog batao", "kitne items hain")
+4. "search_catalog" -> Find specific item in catalog (e.g. "coffee ka price kya hai", "burger dikhao")
+5. "check_payment_status" -> Payment verification (e.g. "payment aaya kya")
+6. "query_pending" -> Pending/unpaid balance (e.g. "kitna baaki hai")
+7. "query_daily" -> Today's sales summary (e.g. "aaj kitna collection hua")
+8. "general_qa" -> Greetings, help, unclear commands
+
+Output strictly valid JSON:
+{{
+  "intent": "record_sale" | "add_to_catalog" | "list_catalog" | "search_catalog" | "check_payment_status" | "query_pending" | "query_daily" | "general_qa",
+  "product_name": "item name if checking status or searching catalog, else null",
+  "items": [
+    {{
+      "product_name": "item name — must match catalog for sales",
+      "quantity": int (default 1),
+      "unit_price": float or null,
+      "category": "optional category",
+      "unit": "optional unit e.g. cup, kg, piece"
+    }}
+  ],
+  "payment_status": "pending" | "paid" | "partial",
+  "explanation": "Brief polite reply in Hindi/Hinglish — do NOT include made-up financial numbers."
+}}
+"""
+
+
+def _match_catalog_name(name: str, catalog_items: List[str]) -> Optional[str]:
+    """Find best catalog match for a spoken product name."""
+    if not name or not catalog_items:
+        return None
+    name_lower = name.strip().lower()
+    if name_lower in DEVANAGARI_PRODUCT_MAP:
+        name_lower = DEVANAGARI_PRODUCT_MAP[name_lower]
+
+    for prod in catalog_items:
+        pl = prod.lower()
+        if pl == name_lower:
+            return pl
+    for prod in catalog_items:
+        pl = prod.lower()
+        if pl in name_lower or name_lower in pl:
+            return pl
+    for dev_k, eng_v in DEVANAGARI_PRODUCT_MAP.items():
+        if dev_k in name or eng_v == name_lower:
+            for prod in catalog_items:
+                if prod.lower() == eng_v or eng_v in prod.lower():
+                    return prod.lower()
+    return None
 
 
 class BaseLLMProvider:
@@ -99,9 +189,133 @@ class BaseLLMProvider:
                     quantity=int(raw_item.get("quantity", 1) or 1),
                     unit_price=float(raw_item.get("unit_price")) if raw_item.get("unit_price") is not None else None,
                     category=str(raw_item.get("category", "")).strip() if raw_item.get("category") else None,
+                    unit=str(raw_item.get("unit", "")).strip() if raw_item.get("unit") else None,
                 )
             )
         return items
+
+    def _parse_extraction_response(self, text: str, data: Dict[str, Any]) -> VoiceExtractionResult:
+        return VoiceExtractionResult(
+            intent=data.get("intent", "general_qa"),
+            product_name=data.get("product_name"),
+            items=self._parse_items(data),
+            payment_status=data.get("payment_status", "pending"),
+            raw_text=text,
+            explanation=data.get("explanation"),
+        )
+
+
+class GroqLLMProvider(BaseLLMProvider):
+    name = "groq"
+
+    def __init__(self):
+        self.client = None
+        if settings.GROQ_API_KEY:
+            try:
+                from groq import Groq
+                self.client = Groq(api_key=settings.GROQ_API_KEY)
+            except Exception as exc:
+                logger.warning("Could not initialize Groq client: %s", exc)
+
+    def extract_transaction(
+        self,
+        text: str,
+        catalog_items: Optional[List[str]] = None,
+        merchant_profile: Optional[dict] = None,
+        business_type: Optional[str] = None,
+        context: str = "terminal",
+    ) -> VoiceExtractionResult:
+        if not self.client:
+            raise RuntimeError("Groq client not configured")
+
+        prompt = _build_extraction_prompt(text, catalog_items, merchant_profile, business_type, context)
+        model = settings.GROQ_MODEL or settings.LLM_MODEL
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            )
+            response_text = self._strip_markdown_json(response.choices[0].message.content or "")
+            data = json.loads(response_text)
+            return self._parse_extraction_response(text, data)
+        except Exception as exc:
+            logger.warning("Groq extraction failed: %s", exc)
+            raise
+
+    def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
+        if not self.client:
+            raise RuntimeError("Groq client not configured")
+
+        prompt = f"""
+You are VoiceLedger AI. Answer ONLY using the exact numbers in Live Store Financial Facts below.
+Do NOT invent or estimate any amounts. If data is missing, say you don't have that information.
+Reply in 1-2 sentences of natural Hindi/Hinglish.
+
+Live Store Financial Facts:
+{json.dumps(context_data, indent=2, default=str)}
+
+Merchant Query: "{query}"
+"""
+        model = settings.GROQ_MODEL or settings.LLM_MODEL
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0,
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            )
+            return (response.choices[0].message.content or "").strip()
+        except Exception as exc:
+            logger.warning("Groq answer generation failed: %s", exc)
+            raise
+
+    def refine_for_speech(self, text: str, lang: str = "hi") -> str:
+        if not self.client or not settings.TTS_USE_LLM_REFINEMENT:
+            return text
+        prompt = f"""
+Convert this shopkeeper assistant message into natural spoken {'Hindi' if lang.startswith('hi') else 'English'}.
+Rules: keep it under 2 sentences, remove URLs/emojis/markdown, convert Rs/₹ to "rupaye", no bullet points.
+Return ONLY the spoken text, nothing else.
+
+Message: {text}
+"""
+        model = settings.GROQ_MODEL or settings.LLM_MODEL
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                timeout=10,
+            )
+            refined = (response.choices[0].message.content or "").strip()
+            return refined if refined else text
+        except Exception:
+            return text
+
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        if not self.client or not profile:
+            return super().summarize_profile(profile)
+        prompt = f"Summarize this merchant profile in JSON with modules and a short summary: {json.dumps(profile, default=str)}"
+        model = settings.GROQ_MODEL or settings.LLM_MODEL
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+                timeout=settings.LLM_REQUEST_TIMEOUT_SECONDS,
+            )
+            txt = self._strip_markdown_json(response.choices[0].message.content or "")
+            try:
+                return json.loads(txt)
+            except Exception:
+                return {"modules": [], "summary": txt}
+        except Exception as exc:
+            logger.warning("Groq summarize_profile failed: %s", exc)
+            return super().summarize_profile(profile)
 
 
 class GeminiLLMProvider(BaseLLMProvider):
@@ -116,56 +330,24 @@ class GeminiLLMProvider(BaseLLMProvider):
             except Exception as exc:
                 logger.warning("Could not initialize Gemini client: %s", exc)
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
+    def extract_transaction(
+        self,
+        text: str,
+        catalog_items: Optional[List[str]] = None,
+        merchant_profile: Optional[dict] = None,
+        business_type: Optional[str] = None,
+        context: str = "terminal",
+    ) -> VoiceExtractionResult:
         if not self.client:
             raise RuntimeError("Gemini client not configured")
 
-        catalog_prompt = f"Merchant Store Product Catalog: {', '.join(catalog_items)}" if catalog_items else ""
-        profile_prompt = f"Merchant Profile: {json.dumps(merchant_profile, default=str)}" if merchant_profile else ""
-        prompt = f"""
-You are VoiceLedger AI, an intelligent financial voice assistant for Indian retail shopkeepers.
-Analyze what the merchant spoke in Hindi, Hinglish, or English:
-"{text}"
-
-{catalog_prompt}
-{profile_prompt}
-
-Classify the intent into one of:
-1. "record_sale" -> Selling catalog/retail items (e.g. "2 chai 40 rs", "1 burger becha")
-2. "add_to_catalog" -> Adding new items to store catalog (e.g. "menu mein butter chicken add karo 350 rupaye")
-3. "check_payment_status" -> Verifying payment arrival of sold products (e.g. "payment aaya kya", "status kya hai")
-4. "query_pending" -> Asking how much payment is pending/unpaid (e.g. "kitna baaki hai", "pending batao")
-5. "query_daily" -> Asking about today's total sales or collection summary (e.g. "aaj kitna collection hua", "daily summary")
-6. "general_qa" -> General questions, greetings (e.g. "namaste", "help", "kya kar sakte ho")
-
-Output strictly valid JSON:
-{{
-  "intent": "record_sale" | "add_to_catalog" | "check_payment_status" | "query_pending" | "query_daily" | "general_qa",
-  "product_name": "item name if checking status for specific item, else null",
-  "items": [
-    {{
-      "product_name": "item name in standard english (e.g. coffee, burger, notebook, atta)",
-      "quantity": int (default 1),
-      "unit_price": float or null,
-      "category": "optional category name"
-    }}
-  ],
-  "payment_status": "pending" | "paid" | "partial",
-  "explanation": "Natural, complete, and polite reply in conversational Hindi/Hinglish."
-}}
-"""
+        prompt = _build_extraction_prompt(text, catalog_items, merchant_profile, business_type, context)
+        model = settings.GEMINI_MODEL or settings.LLM_MODEL
         try:
-            response = self.client.models.generate_content(model=settings.LLM_MODEL, contents=prompt)
+            response = self.client.models.generate_content(model=model, contents=prompt)
             response_text = self._strip_markdown_json(response.text)
             data = json.loads(response_text)
-            return VoiceExtractionResult(
-                intent=data.get("intent", "record_sale"),
-                product_name=data.get("product_name"),
-                items=self._parse_items(data),
-                payment_status=data.get("payment_status", "pending"),
-                raw_text=text,
-                explanation=data.get("explanation"),
-            )
+            return self._parse_extraction_response(text, data)
         except Exception as exc:
             logger.warning("Gemini extraction failed: %s", exc)
             raise
@@ -175,23 +357,38 @@ Output strictly valid JSON:
             raise RuntimeError("Gemini client not configured")
 
         prompt = f"""
-You are VoiceLedger AI, a smart financial assistant for Indian shopkeepers.
-Answer the merchant query clearly in natural, fluent Hindi/Hinglish (1-2 sentences).
+You are VoiceLedger AI. Answer ONLY using the exact numbers in Live Store Financial Facts below.
+Do NOT invent or estimate any amounts. Reply in 1-2 sentences of natural Hindi/Hinglish.
 
 Live Store Financial Facts:
 {json.dumps(context_data, indent=2, default=str)}
 
-Merchant Spoken Query:
-"{query}"
-
-Respond with an accurate, friendly answer:
+Merchant Query: "{query}"
 """
+        model = settings.GEMINI_MODEL or settings.LLM_MODEL
         try:
-            response = self.client.models.generate_content(model=settings.LLM_MODEL, contents=prompt)
+            response = self.client.models.generate_content(model=model, contents=prompt)
             return response.text.strip()
         except Exception as exc:
             logger.warning("Gemini answer generation failed: %s", exc)
             raise
+
+    def refine_for_speech(self, text: str, lang: str = "hi") -> str:
+        if not self.client or not settings.TTS_USE_LLM_REFINEMENT:
+            return text
+        prompt = f"""
+Convert this message into natural spoken {'Hindi' if lang.startswith('hi') else 'English'} for TTS.
+Keep under 2 sentences, no URLs/emojis. Return ONLY spoken text.
+
+Message: {text}
+"""
+        model = settings.GEMINI_MODEL or settings.LLM_MODEL
+        try:
+            response = self.client.models.generate_content(model=model, contents=prompt)
+            refined = (response.text or "").strip()
+            return refined if refined else text
+        except Exception:
+            return text
 
     def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
         # Use a short prompt to summarize the merchant profile if client present
@@ -316,24 +513,67 @@ class MockLLMProvider(BaseLLMProvider):
 class LLMService:
     """
     Intelligent Conversational Agent & Intent Extraction Service.
-    Seamlessly cascades from Cloud LLM (Gemini/OpenAI) to the High-Accuracy Local Conversational Engine.
+    Cascade: Groq (primary) → Gemini (fallback) → Rule-based engine.
     """
 
     def __init__(self):
-        self.gemini_api_key = settings.GEMINI_API_KEY
-        self.client = None
-        provider_name = (settings.LLM_PROVIDER or "gemini").lower()
+        self.groq = GroqLLMProvider()
+        self.gemini = GeminiLLMProvider()
+        self.openai = OpenAIProvider()
+        self.mock = MockLLMProvider()
 
-        if provider_name == "gemini":
-            self.provider = GeminiLLMProvider()
+        provider_name = (settings.LLM_PROVIDER or "groq").lower()
+        if provider_name == "groq":
+            self.provider = self.groq
+        elif provider_name == "gemini":
+            self.provider = self.gemini
         elif provider_name == "openai":
-            self.provider = OpenAIProvider()
+            self.provider = self.openai
         else:
-            self.provider = MockLLMProvider()
+            self.provider = self.mock
 
-        self.client = getattr(self.provider, "client", None)
+        self.client = getattr(self.provider, "client", None) or getattr(self.gemini, "client", None)
 
-    def extract_transaction(self, text: str, catalog_items: Optional[List[str]] = None, merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
+    def _extract_with_fallback(
+        self,
+        text: str,
+        catalog_items: Optional[List[str]],
+        merchant_profile: Optional[dict],
+        business_type: Optional[str],
+        context: str,
+    ) -> VoiceExtractionResult:
+        """Try Groq first, then Gemini, then rule-based parser."""
+        errors = []
+        for provider in (self.groq, self.gemini):
+            if not getattr(provider, "client", None):
+                continue
+            try:
+                result = provider.extract_transaction(
+                    text, catalog_items, merchant_profile, business_type, context
+                )
+                logger.info("LLM extraction via %s succeeded", provider.name)
+                return result
+            except Exception as exc:
+                errors.append(f"{provider.name}: {exc}")
+                logger.warning("LLM provider %s failed: %s", provider.name, exc)
+
+        if settings.LLM_PROVIDER == "openai" and self.openai.client:
+            try:
+                return self.openai.extract_transaction(text, catalog_items, merchant_profile)
+            except Exception as exc:
+                errors.append(f"openai: {exc}")
+
+        logger.warning("All LLM providers failed (%s), using rule-based parser", "; ".join(errors))
+        return self._dynamic_parse(text, catalog_items or [], merchant_profile, context)
+
+    def extract_transaction(
+        self,
+        text: str,
+        catalog_items: Optional[List[str]] = None,
+        merchant_profile: Optional[dict] = None,
+        business_type: Optional[str] = None,
+        context: str = "terminal",
+    ) -> VoiceExtractionResult:
         text_clean = text.strip()
         if not text_clean:
             return VoiceExtractionResult(
@@ -342,19 +582,110 @@ class LLMService:
                 explanation="Koi aawaz ya text nahi mila. Kripya dobara bolein.",
             )
 
-        try:
-            return self.provider.extract_transaction(text_clean, catalog_items, merchant_profile)
-        except Exception as exc:
-            # High-Accuracy Dynamic Conversational Intent Engine
-            return self._dynamic_parse(text_clean, catalog_items or [], merchant_profile)
+        result = self._extract_with_fallback(
+            text_clean, catalog_items, merchant_profile, business_type, context
+        )
+        return self.validate_extraction(result, catalog_items or [])
 
-    def answer_query(self, query: str, context_data: Dict[str, Any]) -> str:
-        try:
-            return self.provider.answer_query(query, context_data)
-        except Exception as exc:
+    def validate_extraction(
+        self, extraction: VoiceExtractionResult, catalog_items: List[str]
+    ) -> VoiceExtractionResult:
+        """Ground extraction against catalog to reduce hallucinated sales."""
+        if extraction.intent != "record_sale" or not extraction.items:
+            return extraction
+
+        if not catalog_items:
+            return VoiceExtractionResult(
+                intent="general_qa",
+                raw_text=extraction.raw_text,
+                items=[],
+                explanation=(
+                    "Aapke catalog me abhi koi product nahi hai. "
+                    "Pehle Menu & Items tab me product add karein, ya bolein: 'Menu mein chai add karo 20 rupaye'."
+                ),
+            )
+
+        validated: List[VoiceItemExtracted] = []
+        unknown: List[str] = []
+
+        for item in extraction.items:
+            matched = _match_catalog_name(item.product_name, catalog_items)
+            if matched:
+                validated.append(
+                    VoiceItemExtracted(
+                        product_name=matched,
+                        quantity=item.quantity,
+                        unit_price=item.unit_price,
+                        category=item.category,
+                        unit=item.unit,
+                    )
+                )
+            elif item.unit_price is not None and item.unit_price > 0:
+                validated.append(item)
+            else:
+                unknown.append(item.product_name)
+
+        if unknown and not validated:
+            names = ", ".join(unknown)
+            return VoiceExtractionResult(
+                intent="general_qa",
+                raw_text=extraction.raw_text,
+                items=[],
+                explanation=(
+                    f"'{names}' aapke catalog me nahi mila. "
+                    f"Pehle item add karein ya catalog me maujood naam bolein: {', '.join(catalog_items[:8])}."
+                ),
+            )
+
+        if unknown:
+            names = ", ".join(unknown)
+            extraction.explanation = (
+                f"Kuch items catalog me nahi mile ({names}) — unhe skip kiya. "
+                + (extraction.explanation or "")
+            )
+
+        extraction.items = validated
+        return extraction
+
+    def answer_query(self, query: str, context_data: Dict[str, Any], use_llm: bool = False) -> str:
+        """Deterministic answers by default; LLM only when explicitly requested."""
+        if not use_llm:
             return self._answer_from_context(query, context_data)
 
-    def _dynamic_parse(self, text: str, catalog_items: List[str], merchant_profile: Optional[dict] = None) -> VoiceExtractionResult:
+        for provider in (self.groq, self.gemini):
+            if not getattr(provider, "client", None):
+                continue
+            try:
+                return provider.answer_query(query, context_data)
+            except Exception:
+                continue
+        return self._answer_from_context(query, context_data)
+
+    def refine_for_speech(self, text: str, lang: str = "hi") -> str:
+        for provider in (self.groq, self.gemini):
+            if hasattr(provider, "refine_for_speech") and getattr(provider, "client", None):
+                try:
+                    return provider.refine_for_speech(text, lang)
+                except Exception:
+                    continue
+        return text
+
+    def summarize_profile(self, profile: Optional[dict]) -> Dict[str, Any]:
+        for provider in (self.groq, self.gemini, self.openai):
+            if getattr(provider, "client", None):
+                try:
+                    return provider.summarize_profile(profile)
+                except Exception:
+                    continue
+        return self.mock.summarize_profile(profile)
+
+    def _dynamic_parse(
+        self,
+        text: str,
+        catalog_items: List[str],
+        merchant_profile: Optional[dict] = None,
+        context: str = "terminal",
+    ) -> VoiceExtractionResult:
         """
         High-Accuracy Rule-Based & Semantic NLP Engine for Hindi / Hinglish.
         Accurately separates Status Queries, Add-to-Catalog, Pending Balances, Greetings, and Sales.
@@ -422,6 +753,34 @@ class LLMService:
                 explanation="Aaj ki total sales aur collection summary check ki ja rahi hai.",
             )
 
+        # ── 4b. LIST / SEARCH CATALOG ─────────────────────────────────────
+        list_keywords = [
+            "menu dikhao", "catalog dikhao", "catalog batao", "menu batao", "kitne items",
+            "sab items", "poora menu", "list catalog", "show menu", "show catalog",
+            "मेन्यू दिखाओ", "कैटलॉग दिखाओ",
+        ]
+        if any(k in lower_text for k in list_keywords):
+            return VoiceExtractionResult(
+                intent="list_catalog",
+                raw_text=text,
+                explanation="Aapke catalog ke saare items dikhaye ja rahe hain.",
+            )
+
+        search_keywords = ["ka price", "ki keemat", "kitne ka", "dikhao", "search", "find", "kahan hai"]
+        if any(k in lower_text for k in search_keywords) and catalog_items:
+            matched = None
+            for prod in sorted(catalog_items, key=len, reverse=True):
+                if prod.lower() in lower_text:
+                    matched = prod.lower()
+                    break
+            if matched:
+                return VoiceExtractionResult(
+                    intent="search_catalog",
+                    product_name=matched,
+                    raw_text=text,
+                    explanation=f"'{matched}' catalog me dhoondha ja raha hai.",
+                )
+
         # ── 5. ADD ITEM TO CATALOG / MENU ────────────────────────────────
         is_catalog_add = (
             (any(w in lower_text for w in ["add", "daalo", "dalo", "jodo", "जोड़ो", "ऐड", "list"]))
@@ -471,6 +830,19 @@ class LLMService:
             )
 
         # ── 6. RECORD PRODUCT SALE ─────────────────────────────────────────
+        if not catalog_items:
+            sale_verbs = ["becha", "sold", "diye", "diya", "pack karo", "order", "bill", "sell", "बिका", "बेचा", "दिया"]
+            if any(v in lower_text for v in sale_verbs) or re.search(r"\b\d+\b", lower_text):
+                return VoiceExtractionResult(
+                    intent="general_qa",
+                    raw_text=text,
+                    items=[],
+                    explanation=(
+                        "Aapke catalog me abhi koi product nahi hai. "
+                        "Pehle Menu & Items tab me product add karein."
+                    ),
+                )
+
         items: List[VoiceItemExtracted] = []
         price_found = None
         price_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:each|per|rupaye|rs|rupya|inr|/-|रुपये|रुपया|रु)", lower_text)
@@ -512,15 +884,11 @@ class LLMService:
                 qty_word = qty_match.group(1).lower()
                 qty = HINDI_NUMBERS.get(qty_word, int(qty_word) if qty_word.isdigit() else 1)
 
-            cleaned = lower_text
-            for stop in [
-                "diye", "diya", "sold", "becha", "pack", "karo", "please", "ka", "ki", "ke", "aur", "and",
-                "rupaye", "rs", "inr", "rupya", "each", "per", "total", "order", "item", "दिए", "दिया", "रुपये",
-            ]:
-                cleaned = re.sub(rf"\b{stop}\b", " ", cleaned)
-            cleaned = re.sub(r"\d+", " ", cleaned).strip()
-            product_name = " ".join(cleaned.split()[:3]) if cleaned else "item"
-            items.append(VoiceItemExtracted(product_name=product_name, quantity=qty, unit_price=price_found))
+            # Only accept sale if a catalog item is mentioned
+            for prod in sorted(catalog_items, key=len, reverse=True):
+                if prod.lower() in lower_text:
+                    items.append(VoiceItemExtracted(product_name=prod.lower(), quantity=qty, unit_price=price_found))
+                    break
 
         if items:
             items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in items])

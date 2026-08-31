@@ -36,9 +36,10 @@ class SalesService:
         db.refresh(merchant)
         return merchant
 
-    def find_product_price(self, db: Session, merchant_id: int, item_name: str) -> Tuple[Optional[Product], float]:
+    def find_product_price(self, db: Session, merchant_id: int, item_name: str) -> Tuple[Optional[Product], Optional[float]]:
         """
         Dynamically matches item name to products table in the database.
+        Returns (product, price) or (None, None) if no match — no invented default prices.
         """
         name_lower = item_name.strip().lower()
         
@@ -60,8 +61,7 @@ class SalesService:
             if p.name in name_lower or name_lower in p.name:
                 return p, float(p.price)
                 
-        # 3. Default unit price if uncataloged item and not specified in speech
-        return None, 50.0
+        return None, None
 
     def add_or_update_product(
         self,
@@ -136,7 +136,15 @@ class SalesService:
         for item_data in sale_in.items:
             product, catalog_price = self.find_product_price(db, merchant.id, item_data.product_name)
             # Spoken unit price overrides catalog price
-            unit_price = item_data.unit_price if item_data.unit_price is not None else catalog_price
+            if item_data.unit_price is not None:
+                unit_price = item_data.unit_price
+            elif catalog_price is not None:
+                unit_price = catalog_price
+            else:
+                raise ValueError(
+                    f"'{item_data.product_name}' aapke catalog me nahi hai aur price bhi nahi bola gaya. "
+                    "Pehle item catalog me add karein ya price ke saath bolein."
+                )
             subtotal = float(item_data.quantity * unit_price)
             total_amount += subtotal
 

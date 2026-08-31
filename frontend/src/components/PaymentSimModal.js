@@ -56,21 +56,21 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
           {/* Header */}
           <View style={styles.modalHeader}>
             <View style={styles.titleWrap}>
-              <Zap size={20} color="#f59e0b" style={{ marginRight: 8 }} />
-              <Text style={styles.modalTitle}>Simulate Customer Payment</Text>
+              <Zap size={16} color={colors.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.modalTitle}>Simulate Payment Settlement</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={18} color={colors.textSecondary} />
+              <X size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.modalSubtitle}>
-            Simulate payment arrival to verify automatic reconciliation and voice status checks.
+            Simulate customer payment arrival to trigger automatic ledger reconciliation and voice soundbox confirmation.
           </Text>
 
           {/* Form Fields */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Sale ID</Text>
+            <Text style={styles.label}>Transaction ID</Text>
             <TextInput
               style={[styles.input, styles.inputReadOnly]}
               value={sale.id}
@@ -79,7 +79,7 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Sold Products</Text>
+            <Text style={styles.label}>Purchased Items</Text>
             <TextInput
               style={[styles.input, styles.inputReadOnly]}
               value={itemsSummary}
@@ -89,7 +89,7 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
 
           <View style={styles.formRow}>
             <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Expected</Text>
+              <Text style={styles.label}>Total Payable</Text>
               <TextInput
                 style={[styles.input, styles.inputReadOnly]}
                 value={`₹${sale.total_amount.toFixed(2)}`}
@@ -97,7 +97,7 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
               />
             </View>
             <View style={[styles.formGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Payment Amount (₹)</Text>
+              <Text style={styles.label}>Settlement Amount (₹)</Text>
               <TextInput
                 style={[styles.input, styles.inputActive]}
                 value={amountInput}
@@ -110,10 +110,10 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
           {/* Quick Buttons */}
           <View style={styles.quickBtnRow}>
             <TouchableOpacity style={styles.quickBtn} onPress={handlePayFull}>
-              <Text style={styles.quickBtnText}>Pay Full (100%)</Text>
+              <Text style={styles.quickBtnText}>Full Settlement (100%)</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickBtn} onPress={handlePayPartial}>
-              <Text style={styles.quickBtnText}>Pay Partial (50%)</Text>
+              <Text style={styles.quickBtnText}>Partial Settlement (50%)</Text>
             </TouchableOpacity>
           </View>
 
@@ -127,7 +127,7 @@ export default function PaymentSimModal({ visible, sale, onClose, onSubmit, isSu
             {isSubmitting ? (
               <ActivityIndicator size="small" color="#ffffff" />
             ) : (
-              <Text style={styles.submitBtnText}>Process Test Payment</Text>
+              <Text style={styles.submitBtnText}>Execute Settlement</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -142,64 +142,63 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 500,
-    backgroundColor: '#121826',
-    borderRadius: 20,
+    maxWidth: 480,
+    backgroundColor: '#111827',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 24,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   titleWrap: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   closeBtn: {
-    padding: 6,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 4,
   },
   modalSubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
-    marginBottom: 20,
+    marginBottom: 16,
+    lineHeight: 16,
   },
   formGroup: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   formRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   label: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: colors.textMuted,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   input: {
-    backgroundColor: '#0a0e17',
+    backgroundColor: '#0b0f19',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
   },
   inputReadOnly: {
     opacity: 0.7,
@@ -209,28 +208,28 @@ const styles = StyleSheet.create({
   },
   quickBtnRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-    marginTop: 4,
+    gap: 8,
+    marginBottom: 16,
+    marginTop: 2,
   },
   quickBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderRadius: 6,
+    paddingVertical: 8,
     alignItems: 'center',
   },
   quickBtnText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#a5b4fc',
   },
   submitBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 8,
+    paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -238,7 +237,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   submitBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#ffffff',
   },

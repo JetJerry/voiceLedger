@@ -119,8 +119,83 @@ def upsert_merchant_profile(profile_in: MerchantProfileCreate, db: Session = Dep
 def preview_merchant_profile(profile_in: MerchantProfileCreate = Body(...), db: Session = Depends(get_db)):
     """LLM-driven profile preview / validation."""
     profile = profile_in.config or {}
-    summary = llm_service.provider.summarize_profile(profile)
+    summary = llm_service.summarize_profile(profile)
     return {"preview": summary}
+
+
+@router.get("/catalog/business-types")
+def get_business_types():
+    """List available business type presets (suggestions only — schema stays flexible)."""
+    from backend.app.services.business_presets import list_business_types, BUSINESS_TYPES
+    return {
+        "types": list_business_types(),
+        "presets": {k: {
+            "default_categories": v.get("default_categories", []),
+            "default_units": v.get("default_units", []),
+            "attribute_hints": v.get("attribute_hints", []),
+            "sample_items": v.get("sample_items", []),
+        } for k, v in BUSINESS_TYPES.items()},
+    }
+
+
+@router.post("/catalog/merchant/business-type")
+def set_merchant_business_type(
+    business_type: str = Body(..., embed=True),
+    apply_sample_items: bool = Body(False, embed=True),
+    db: Session = Depends(get_db),
+):
+    """
+    Set merchant business type (e.g. Cafe & Restaurant).
+    Optionally seeds sample items — shopkeeper can still add anything custom.
+    """
+    from backend.app.services.business_presets import get_business_preset, BUSINESS_TYPES
+
+    if business_type not in BUSINESS_TYPES:
+        raise HTTPException(status_code=400, detail=f"Unknown business type: {business_type}")
+
+    merchant = sales_service.get_or_create_merchant(db)
+    merchant.business_type = business_type
+    db.commit()
+
+    preset = get_business_preset(business_type)
+    profile = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
+    cfg = {}
+    if profile:
+        try:
+            cfg = json.loads(profile.config_json or "{}")
+        except Exception:
+            cfg = {}
+    cfg["business_type"] = business_type
+    cfg["suggested_categories"] = preset.get("default_categories", [])
+    cfg["suggested_units"] = preset.get("default_units", [])
+    cfg["attribute_hints"] = preset.get("attribute_hints", [])
+
+    if profile:
+        profile.config_json = json.dumps(cfg)
+        profile.updated_at = datetime.now(timezone.utc)
+    else:
+        profile = MerchantProfile(merchant_id=merchant.id, config_json=json.dumps(cfg))
+        db.add(profile)
+    db.commit()
+
+    seeded = []
+    if apply_sample_items:
+        for item in preset.get("sample_items", []):
+            prod = sales_service.add_or_update_product(
+                db=db,
+                name=item["name"],
+                price=float(item.get("price", 0)),
+                category=item.get("category", "General"),
+                unit=item.get("unit"),
+            )
+            seeded.append({"id": prod.id, "name": prod.name, "price": prod.price})
+
+    return {
+        "merchant_id": merchant.id,
+        "business_type": business_type,
+        "preset": preset,
+        "seeded_items": seeded,
+    }
 
 
 @router.get("/admin/merchant/{merchant_id}/profile/export")

@@ -9,7 +9,18 @@ import {
   ScrollView,
   useWindowDimensions,
 } from 'react-native';
-import { Lock, Store, ShieldCheck, UserCheck, Sparkles, ArrowRight, Server, Check, Edit2 } from 'lucide-react-native';
+import {
+  Lock,
+  Store,
+  ShieldCheck,
+  User,
+  PlusCircle,
+  Server,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  RefreshCw,
+} from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { apiService } from '../services/apiService';
 import { getApiBase, setCustomApiBase, DEFAULT_MODAL_API_URL } from '../config/api';
@@ -65,20 +76,19 @@ export default function LoginScreen({ onLoginSuccess }) {
       const res = await fetch(`${base}/health`, { method: 'GET' });
       if (res.ok) {
         setServerStatus('connected');
-        setTestResult('🟢 Connected to Modal Cloud Backend!');
+        setTestResult('Connected to backend service');
       } else {
         setServerStatus('error');
-        setTestResult(`🔴 Backend returned status ${res.status}`);
+        setTestResult(`Backend returned status ${res.status}`);
       }
     } catch (e) {
       setServerStatus('error');
-      setTestResult(`🔴 Connection error: ${e.message}`);
+      setTestResult(`Connection error: ${e.message}`);
     }
   };
 
   useEffect(() => {
     checkConnection();
-    // Load demo accounts for quick-click convenience
     apiService.getDemoAccounts()
       .then((data) => {
         setDemoAccounts(data);
@@ -121,7 +131,6 @@ export default function LoginScreen({ onLoginSuccess }) {
     try {
       const res = await apiService.login(userToLogin.trim(), passToLogin.trim(), roleToLogin);
       if (res.success && res.user) {
-        // Persist session in localStorage for Web
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem('voiceledger_session', JSON.stringify({
             token: res.token,
@@ -132,7 +141,7 @@ export default function LoginScreen({ onLoginSuccess }) {
         onLoginSuccess(res.user, res.role, res.token);
       }
     } catch (e) {
-      setErrorMessage(e.message || 'Login failed. Please check your credentials.');
+      setErrorMessage(e.message || 'Authentication failed. Please check credentials or network connection.');
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +183,7 @@ export default function LoginScreen({ onLoginSuccess }) {
         onLoginSuccess(res.user, res.role, res.token);
       }
     } catch (e) {
-      setErrorMessage(e.message || 'Registration failed.');
+      setErrorMessage(e.message || 'Store registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -183,14 +192,15 @@ export default function LoginScreen({ onLoginSuccess }) {
   return (
     <View style={styles.container}>
       <View style={[styles.card, isMobile && styles.cardMobile]}>
-        
-        {/* Brand Banner */}
+        {/* Brand Header */}
         <View style={styles.brandBanner}>
-          <View style={styles.logoBadge}>
-            <Store size={26} color="#ffffff" strokeWidth={2.5} />
+          <View style={styles.brandLogo}>
+            <Store size={22} color="#ffffff" strokeWidth={2.2} />
           </View>
-          <Text style={styles.appTitle}>VoiceLedger</Text>
-          <Text style={styles.appTagline}>Voice-First Multi-Vendor Sales & Payment Platform</Text>
+          <Text style={styles.brandTitle}>VoiceLedger</Text>
+          <Text style={styles.brandSubtitle}>
+            Voice-First Financial Ledger & Payment Reconciliation Platform
+          </Text>
         </View>
 
         {/* Portal Role Switcher Tabs */}
@@ -200,9 +210,9 @@ export default function LoginScreen({ onLoginSuccess }) {
             onPress={() => handleRoleChange('merchant')}
             activeOpacity={0.8}
           >
-            <Store size={16} color={selectedRole === 'merchant' ? '#ffffff' : colors.textSecondary} />
+            <Store size={15} color={selectedRole === 'merchant' ? '#ffffff' : colors.textMuted} style={{ marginRight: 6 }} />
             <Text style={[styles.roleTabText, selectedRole === 'merchant' && styles.roleTabTextActive]}>
-              🏪 Shopkeeper Portal
+              Shopkeeper Portal
             </Text>
           </TouchableOpacity>
 
@@ -211,9 +221,9 @@ export default function LoginScreen({ onLoginSuccess }) {
             onPress={() => handleRoleChange('admin')}
             activeOpacity={0.8}
           >
-            <ShieldCheck size={16} color={selectedRole === 'admin' ? '#ffffff' : colors.textSecondary} />
+            <ShieldCheck size={15} color={selectedRole === 'admin' ? '#ffffff' : colors.textMuted} style={{ marginRight: 6 }} />
             <Text style={[styles.roleTabText, selectedRole === 'admin' && styles.roleTabTextActive]}>
-              ⚡ Platform Admin
+              Platform Admin
             </Text>
           </TouchableOpacity>
         </View>
@@ -221,19 +231,21 @@ export default function LoginScreen({ onLoginSuccess }) {
         {/* Error Alert Box */}
         {errorMessage ? (
           <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
+            <AlertCircle size={15} color={colors.accentRose} style={{ marginRight: 8, marginTop: 1 }} />
+            <Text style={styles.errorText}>{errorMessage}</Text>
           </View>
         ) : null}
 
         {/* ── 1. SHOPKEEPER PORTAL ── */}
         {selectedRole === 'merchant' && (
           <View>
-            {/* Login / Register Toggle */}
             <View style={styles.subToggleRow}>
               <TouchableOpacity
                 style={[styles.subToggleBtn, merchantMode === 'login' && styles.subToggleBtnActive]}
                 onPress={() => { setMerchantMode('login'); setErrorMessage(''); }}
+                activeOpacity={0.8}
               >
+                <User size={13} color={merchantMode === 'login' ? colors.primary : colors.textMuted} style={{ marginRight: 5 }} />
                 <Text style={[styles.subToggleText, merchantMode === 'login' && styles.subToggleTextActive]}>
                   Store Sign In
                 </Text>
@@ -242,21 +254,22 @@ export default function LoginScreen({ onLoginSuccess }) {
               <TouchableOpacity
                 style={[styles.subToggleBtn, merchantMode === 'register' && styles.subToggleBtnActive]}
                 onPress={() => { setMerchantMode('register'); setErrorMessage(''); }}
+                activeOpacity={0.8}
               >
+                <PlusCircle size={13} color={merchantMode === 'register' ? colors.primary : colors.textMuted} style={{ marginRight: 5 }} />
                 <Text style={[styles.subToggleText, merchantMode === 'register' && styles.subToggleTextActive]}>
-                  ➕ Register New Store
+                  Register New Store
                 </Text>
               </TouchableOpacity>
             </View>
 
             {merchantMode === 'login' ? (
-              /* Shopkeeper Sign In Form */
               <View style={styles.formWrap}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Store Username / Identifier</Text>
+                  <Text style={styles.inputLabel}>Store Username</Text>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. kirana, bakery, stationery"
+                    placeholder="Enter store username (e.g. kirana)"
                     placeholderTextColor={colors.textMuted}
                     value={username}
                     onChangeText={setUsername}
@@ -285,14 +298,14 @@ export default function LoginScreen({ onLoginSuccess }) {
                   {isLoading ? (
                     <ActivityIndicator color="#ffffff" size="small" />
                   ) : (
-                    <Text style={styles.submitBtnText}>🚀 Enter Store Terminal</Text>
+                    <Text style={styles.submitBtnText}>Sign In to Terminal</Text>
                   )}
                 </TouchableOpacity>
 
-                {/* 1-Click Demo Accounts */}
+                {/* Quick Demo Accounts */}
                 {demoAccounts?.merchants?.length > 0 && (
                   <View style={styles.quickAccountsSection}>
-                    <Text style={styles.quickAccountsTitle}>✨ 1-Click Quick Demo Stores:</Text>
+                    <Text style={styles.quickAccountsTitle}>Quick Access Demo Stores:</Text>
                     <View style={styles.quickAccountsGrid}>
                       {demoAccounts.merchants.map((m, idx) => (
                         <TouchableOpacity
@@ -310,13 +323,12 @@ export default function LoginScreen({ onLoginSuccess }) {
                 )}
               </View>
             ) : (
-              /* Shopkeeper Registration Form */
-              <ScrollView style={styles.registerScroll}>
+              <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Store / Business Name *</Text>
+                  <Text style={styles.inputLabel}>Store Business Name *</Text>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. Fresh Mart Organics, City Medicals"
+                    placeholder="e.g. Sharma General Store"
                     placeholderTextColor={colors.textMuted}
                     value={regName}
                     onChangeText={setRegName}
@@ -324,16 +336,16 @@ export default function LoginScreen({ onLoginSuccess }) {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Business Category</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                    {BUSINESS_TYPES.map((bType) => (
+                  <Text style={styles.inputLabel}>Store Category</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+                    {BUSINESS_TYPES.map((bt) => (
                       <TouchableOpacity
-                        key={bType}
-                        style={[styles.catChip, regBusinessType === bType && styles.catChipActive]}
-                        onPress={() => setRegBusinessType(bType)}
+                        key={bt}
+                        style={[styles.catChip, regBusinessType === bt && styles.catChipActive]}
+                        onPress={() => setRegBusinessType(bt)}
                       >
-                        <Text style={[styles.catChipText, regBusinessType === bType && styles.catChipTextActive]}>
-                          {bType}
+                        <Text style={[styles.catChipText, regBusinessType === bt && styles.catChipTextActive]}>
+                          {bt}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -345,7 +357,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     <Text style={styles.inputLabel}>Username *</Text>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="e.g. green_farm"
+                      placeholder="e.g. sharma_store"
                       placeholderTextColor={colors.textMuted}
                       value={regUsername}
                       onChangeText={setRegUsername}
@@ -357,7 +369,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     <Text style={styles.inputLabel}>Password *</Text>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="Min 4 chars"
+                      placeholder="Min 4 characters"
                       placeholderTextColor={colors.textMuted}
                       value={regPassword}
                       onChangeText={setRegPassword}
@@ -367,7 +379,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>Phone (Optional)</Text>
+                  <Text style={styles.inputLabel}>Contact Phone (Optional)</Text>
                   <TextInput
                     style={styles.textInput}
                     placeholder="+91 98765 43210"
@@ -387,7 +399,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                   {isLoading ? (
                     <ActivityIndicator color="#ffffff" size="small" />
                   ) : (
-                    <Text style={styles.submitBtnText}>✨ Create Store & Open Terminal</Text>
+                    <Text style={styles.submitBtnText}>Create Account & Open Terminal</Text>
                   )}
                 </TouchableOpacity>
               </ScrollView>
@@ -399,14 +411,17 @@ export default function LoginScreen({ onLoginSuccess }) {
         {selectedRole === 'admin' && (
           <View style={styles.formWrap}>
             <View style={styles.adminInfoBanner}>
-              <Text style={styles.adminInfoTitle}>⚡ Platform Super Administrator</Text>
-              <Text style={styles.adminInfoSub}>
-                Oversight of all merchant stores, GMV monitoring, live payment flows, and store approvals.
-              </Text>
+              <ShieldCheck size={16} color="#c4b5fd" style={{ marginRight: 8, marginTop: 1 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.adminInfoTitle}>Platform Administration Hub</Text>
+                <Text style={styles.adminInfoSub}>
+                  Consolidated oversight of merchant stores, transaction volumes, and live settlements.
+                </Text>
+              </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Admin Username</Text>
+              <Text style={styles.inputLabel}>Admin Identifier</Text>
               <TextInput
                 style={styles.textInput}
                 placeholder="admin"
@@ -418,10 +433,10 @@ export default function LoginScreen({ onLoginSuccess }) {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Admin Security Key / Password</Text>
+              <Text style={styles.inputLabel}>Security Key</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="admin123"
+                placeholder="Enter admin password"
                 placeholderTextColor={colors.textMuted}
                 value={password}
                 onChangeText={setPassword}
@@ -438,7 +453,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               {isLoading ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.submitBtnText}>⚡ Authenticate Admin Access</Text>
+                <Text style={styles.submitBtnText}>Authenticate Admin</Text>
               )}
             </TouchableOpacity>
 
@@ -447,12 +462,12 @@ export default function LoginScreen({ onLoginSuccess }) {
               onPress={() => handleLogin('admin', 'admin123', 'admin')}
               activeOpacity={0.8}
             >
-              <Text style={styles.quickAdminBtnText}>⚡ 1-Click Demo Admin Login</Text>
+              <Text style={styles.quickAdminBtnText}>1-Click Demo Admin Login</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* ── Server API Connection Badge & Config ── */}
+        {/* Server Status & Configuration */}
         <View style={styles.serverConnectionWrap}>
           <TouchableOpacity
             style={styles.serverStatusBar}
@@ -465,10 +480,10 @@ export default function LoginScreen({ onLoginSuccess }) {
                 serverStatus === 'connected' ? styles.statusDotGreen : (serverStatus === 'error' ? styles.statusDotRed : styles.statusDotYellow)
               ]} />
               <Text style={styles.serverStatusText} numberOfLines={1}>
-                {serverStatus === 'connected' ? 'Cloud Backend Connected' : (serverStatus === 'error' ? 'Backend Disconnected' : 'Checking Backend...')}
+                {serverStatus === 'connected' ? 'Backend Service Online' : (serverStatus === 'error' ? 'Backend Offline' : 'Connecting...')}
               </Text>
             </View>
-            <Text style={styles.serverConfigToggle}>{showServerConfig ? '▲ Close' : '⚙️ API Server'}</Text>
+            <Text style={styles.serverConfigToggle}>{showServerConfig ? 'Close' : 'Configure Endpoint'}</Text>
           </TouchableOpacity>
 
           {showServerConfig && (
@@ -490,7 +505,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     checkConnection(currentApiUrl);
                   }}
                 >
-                  <Text style={styles.serverActionBtnText}>💾 Save & Test</Text>
+                  <Text style={styles.serverActionBtnText}>Save & Test</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -501,7 +516,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     checkConnection(DEFAULT_MODAL_API_URL);
                   }}
                 >
-                  <Text style={styles.serverActionBtnResetText}>↺ Reset to Modal</Text>
+                  <Text style={styles.serverActionBtnResetText}>Reset Default</Text>
                 </TouchableOpacity>
               </View>
               {testResult ? <Text style={styles.testResultText}>{testResult}</Text> : null}
@@ -509,10 +524,10 @@ export default function LoginScreen({ onLoginSuccess }) {
           )}
         </View>
 
-        {/* Portal Footer */}
+        {/* Card Footer */}
         <View style={styles.cardFooter}>
           <Text style={styles.cardFooterText}>
-            🔒 Secured with role-based store isolation and Razorpay payment tracking
+            Secured with store isolation and Razorpay payment tracking
           </Text>
         </View>
       </View>
@@ -524,23 +539,23 @@ const styles = StyleSheet.create({
   container: {
     minHeight: '100vh',
     width: '100%',
-    backgroundColor: colors.bgDark,
+    backgroundColor: '#0b0f19',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
   },
   card: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 24,
+    backgroundColor: '#111827',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 28,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 32,
     width: '100%',
-    maxWidth: 520,
+    maxWidth: 480,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
   },
   cardMobile: {
     padding: 20,
@@ -549,144 +564,134 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  brandLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
   },
-  appTitle: {
-    fontSize: 26,
-    fontWeight: '900',
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.5,
   },
-  appTagline: {
-    fontSize: 13,
+  brandSubtitle: {
+    fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 4,
     textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
   },
-
-  // Role Switcher Tabs
   roleTabsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 10,
     padding: 4,
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.borderColor,
+    marginBottom: 20,
   },
   roleTab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 8,
+    paddingVertical: 9,
+    borderRadius: 8,
   },
   roleTabActive: {
     backgroundColor: colors.primary,
   },
   roleTabAdminActive: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#7c3aed',
   },
   roleTabText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
   },
   roleTabTextActive: {
     color: '#ffffff',
+    fontWeight: '700',
   },
-
-  // Error Alert
-  errorBox: {
-    backgroundColor: 'rgba(244, 63, 94, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(244, 63, 94, 0.3)',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: colors.accentRose,
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  // Sub Toggle (Sign in vs Register)
   subToggleRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 12,
-    marginBottom: 18,
+    marginBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
-    paddingBottom: 10,
+    paddingBottom: 4,
   },
   subToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    marginRight: 8,
+    borderRadius: 6,
   },
   subToggleBtnActive: {
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
   },
   subToggleText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.textMuted,
   },
   subToggleTextActive: {
     color: colors.primary,
-    fontWeight: '800',
+    fontWeight: '700',
   },
-
-  // Forms
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.25)',
+    padding: 10,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#fb7185',
+    fontSize: 12,
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 16,
+  },
   formWrap: {
     width: '100%',
-  },
-  registerScroll: {
-    maxHeight: 380,
   },
   inputGroup: {
     marginBottom: 14,
   },
   inputLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: colors.textSecondary,
     marginBottom: 6,
   },
   textInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: '#0b0f19',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 44,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: colors.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
   },
   rowTwo: {
     flexDirection: 'row',
   },
   catChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 6,
     marginRight: 6,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -703,39 +708,31 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-
   submitBtn: {
     backgroundColor: colors.primary,
-    borderRadius: 12,
-    height: 46,
+    borderRadius: 8,
+    height: 42,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 6,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
   },
   submitBtnAdmin: {
-    backgroundColor: '#8b5cf6',
-    shadowColor: '#8b5cf6',
+    backgroundColor: '#7c3aed',
   },
   submitBtnText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
   },
-
-  // Quick Accounts
   quickAccountsSection: {
-    marginTop: 20,
-    paddingTop: 16,
+    marginTop: 18,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: colors.borderColor,
   },
   quickAccountsTitle: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.textMuted,
     marginBottom: 8,
   },
@@ -745,73 +742,60 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickAccountChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 8,
     flex: 1,
-    minWidth: 140,
+    minWidth: 130,
   },
   quickAccountName: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   quickAccountRole: {
     fontSize: 10,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     marginTop: 2,
   },
-
-  // Admin Banner
   adminInfoBanner: {
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.25)',
+    borderColor: 'rgba(124, 58, 237, 0.2)',
     padding: 12,
     marginBottom: 16,
   },
   adminInfoTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#a78bfa',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#c4b5fd',
     marginBottom: 2,
   },
   adminInfoSub: {
     fontSize: 11,
     color: colors.textSecondary,
-    lineHeight: 16,
+    lineHeight: 15,
   },
   quickAdminBtn: {
-    backgroundColor: 'rgba(139, 92, 246, 0.12)',
+    backgroundColor: 'rgba(124, 58, 237, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(139, 92, 246, 0.3)',
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderColor: 'rgba(124, 58, 237, 0.25)',
+    borderRadius: 8,
+    paddingVertical: 9,
     alignItems: 'center',
     marginTop: 10,
   },
   quickAdminBtnText: {
     color: '#c4b5fd',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
-
-  // Card Footer
-  cardFooter: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  cardFooterText: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-
-  // Server Connection Status & Config Box
   serverConnectionWrap: {
     marginTop: 18,
     borderTopWidth: 1,
@@ -822,12 +806,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   serverStatusLeft: {
     flexDirection: 'row',
@@ -835,9 +819,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 8,
   },
   statusDotGreen: {
@@ -852,18 +836,18 @@ const styles = StyleSheet.create({
   serverStatusText: {
     fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   serverConfigToggle: {
     fontSize: 11,
     color: colors.primary,
-    fontWeight: '700',
+    fontWeight: '600',
     marginLeft: 8,
   },
   serverConfigBox: {
-    marginTop: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 10,
+    marginTop: 8,
+    backgroundColor: '#0b0f19',
+    borderRadius: 8,
     padding: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -875,10 +859,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   serverConfigInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 8,
+    borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     color: colors.textPrimary,
@@ -901,7 +885,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   serverActionBtnReset: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -909,11 +893,20 @@ const styles = StyleSheet.create({
   serverActionBtnResetText: {
     color: colors.textSecondary,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   testResultText: {
-    marginTop: 8,
+    marginTop: 6,
     fontSize: 11,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
+  },
+  cardFooter: {
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  cardFooterText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
   },
 });

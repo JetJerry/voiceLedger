@@ -11,14 +11,14 @@ export const apiService = {
     return await res.json();
   },
 
-  async processVoiceCommand(text) {
+  async processVoiceCommand(text, context = 'terminal') {
     const base = getApiBase();
     const res = await fetch(`${base}/voice/process-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text, speak_response: true, voice_lang: 'hi' }),
+      body: JSON.stringify({ text, speak_response: true, voice_lang: 'hi', context }),
     });
     if (!res.ok) {
       throw new Error(`Voice processing error: ${res.status}`);
@@ -267,6 +267,39 @@ export const apiService = {
     const res = await fetch(`${base}/auth/demo-accounts`);
     if (!res.ok) {
       throw new Error(`Failed to fetch demo accounts: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  // ── Business Type & Catalog Voice APIs ────────────────────────────
+  async getBusinessTypes() {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/business-types`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch business types: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async setBusinessType(businessType, applySampleItems = false) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/merchant/business-type`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ business_type: businessType, apply_sample_items: applySampleItems }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || `Failed to set business type: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async getMerchant() {
+    const base = getApiBase();
+    const res = await fetch(`${base}/sales/catalog/merchant`);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch merchant: ${res.status}`);
     }
     return await res.json();
   },
