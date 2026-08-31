@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { colors } from './src/theme/colors';
 import { apiService } from './src/services/apiService';
+import { voiceService } from './src/services/voiceService';
 import Header from './src/components/Header';
 import LoginScreen from './src/components/LoginScreen';
 import VoiceAssistantCard from './src/components/VoiceAssistantCard';
@@ -33,6 +34,9 @@ export default function App() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeSimSale, setActiveSimSale] = useState(null);
   const [isSimSubmitting, setIsSimSubmitting] = useState(false);
+
+  // Live Payment Soundbox Announcement State
+  const [soundboxAlert, setSoundboxAlert] = useState(null);
 
   // Restore session on app load
   useEffect(() => {
@@ -63,6 +67,30 @@ export default function App() {
     }
   }, [currentUser]);
 
+  // Poll for Live Payment Arrival Announcements (Soundbox mode)
+  const pollPaymentAnnouncements = useCallback(async () => {
+    if (!currentUser || currentUser.role === 'admin') return;
+    try {
+      const announcements = await apiService.getPaymentAnnouncements(currentUser.id);
+      if (announcements && announcements.length > 0) {
+        for (const ann of announcements) {
+          // Set visual alert
+          setSoundboxAlert(ann);
+          // Play Neural TTS Voice Announcement aloud!
+          if (ann.audio_base64 || ann.speech_text) {
+            voiceService.playTTSAudio(ann.audio_base64, ann.speech_text);
+          }
+          // Acknowledge so it is not repeated
+          await apiService.acknowledgePaymentAnnouncement(ann.id);
+          // Refresh metrics & ledger
+          await loadDashboard();
+        }
+      }
+    } catch (e) {
+      // Background poll notice
+    }
+  }, [currentUser, loadDashboard]);
+
   const handleLoginSuccess = (user, role, token) => {
     setCurrentUser(user);
     setCurrentView(role === 'admin' ? 'admin' : 'terminal');
@@ -76,6 +104,7 @@ export default function App() {
     setCurrentUser(null);
     setSummaryData(null);
     setCurrentView('terminal');
+    setSoundboxAlert(null);
   };
 
   const handleManualRefresh = async () => {
@@ -87,11 +116,15 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     loadDashboard();
+    pollPaymentAnnouncements();
 
-    // Auto-refresh every 5 seconds for live webhook arrival
-    const interval = setInterval(loadDashboard, 5000);
+    // Auto-refresh summary & poll payment soundbox every 3 seconds
+    const interval = setInterval(() => {
+      loadDashboard();
+      pollPaymentAnnouncements();
+    }, 3000);
     return () => clearInterval(interval);
-  }, [currentUser, loadDashboard]);
+  }, [currentUser, loadDashboard, pollPaymentAnnouncements]);
 
   // Payment simulation handler
   const handleOpenSimulate = (sale) => {
@@ -108,6 +141,7 @@ export default function App() {
       await apiService.simulatePayment(saleId, amount);
       handleCloseSimulate();
       await loadDashboard();
+      await pollPaymentAnnouncements();
     } catch (e) {
       alert(`Simulation failed: ${e.message}`);
     } finally {
@@ -136,6 +170,37 @@ export default function App() {
         currentUser={currentUser}
         onLogout={handleLogout}
       />
+
+      {/* Live Payment Soundbox Announcement Alert Banner */}
+      {soundboxAlert && (
+        <View style={styles.soundboxBanner}>
+          <View style={styles.soundboxLeft}>
+            <Text style={styles.soundboxIcon}>🔊 💰</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.soundboxTitle}>
+                Payment Confirmed: ₹{soundboxAlert.amount} for {soundboxAlert.items_summary}
+              </Text>
+              <Text style={styles.soundboxSpeech}>{soundboxAlert.speech_text}</Text>
+            </View>
+          </View>
+          <View style={styles.soundboxActions}>
+            <TouchableOpacity
+              style={styles.soundboxReplayBtn}
+              onPress={() => voiceService.playTTSAudio(soundboxAlert.audio_base64, soundboxAlert.speech_text)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.soundboxReplayText}>🔊 Replay</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.soundboxDismissBtn}
+              onPress={() => setSoundboxAlert(null)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.soundboxDismissText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Main Content Area */}
       <ScrollView
@@ -356,5 +421,72 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontWeight: '800',
     marginLeft: 10,
+  },
+
+  // ── Live Voice Soundbox Banner ──
+  soundboxBanner: {
+    backgroundColor: '#064e3b',
+    borderBottomWidth: 1,
+    borderBottomColor: '#059669',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 100,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  soundboxLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  soundboxIcon: {
+    fontSize: 24,
+  },
+  soundboxTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#34d399',
+    marginBottom: 2,
+  },
+  soundboxSpeech: {
+    fontSize: 12,
+    color: '#e2e8f0',
+    fontStyle: 'italic',
+  },
+  soundboxActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 12,
+  },
+  soundboxReplayBtn: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  soundboxReplayText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  soundboxDismissBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soundboxDismissText: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

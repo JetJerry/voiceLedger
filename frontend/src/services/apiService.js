@@ -26,6 +26,30 @@ export const apiService = {
     return await res.json();
   },
 
+  async getPaymentAnnouncements(merchantId = null) {
+    const base = getApiBase();
+    let url = `${base}/voice/payment-announcements`;
+    if (merchantId) {
+      url += `?merchant_id=${merchantId}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      return [];
+    }
+    return await res.json();
+  },
+
+  async acknowledgePaymentAnnouncement(announcementId) {
+    const base = getApiBase();
+    try {
+      await fetch(`${base}/voice/payment-announcements/${announcementId}/ack`, {
+        method: 'POST',
+      });
+    } catch (e) {
+      console.warn('Ack announcement notice:', e.message);
+    }
+  },
+
   async simulatePayment(saleId, amount) {
     const base = getApiBase();
     const res = await fetch(`${base}/payments/simulate`, {

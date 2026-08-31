@@ -10,16 +10,16 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
 
   let badgeStyle = styles.badgePending;
   let badgeTextStyle = styles.badgePendingText;
-  let statusLabel = 'PENDING ⏳';
+  let statusLabel = 'PENDING';
 
   if (sale.status === 'PAID') {
     badgeStyle = styles.badgePaid;
     badgeTextStyle = styles.badgePaidText;
-    statusLabel = 'PAID ✅';
+    statusLabel = 'PAID';
   } else if (sale.status === 'PARTIAL') {
     badgeStyle = styles.badgePartial;
     badgeTextStyle = styles.badgePartialText;
-    statusLabel = 'PARTIAL ⚠️';
+    statusLabel = 'PARTIAL';
   }
 
   const handleOpenRzpLink = () => {

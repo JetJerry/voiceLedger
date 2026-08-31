@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -54,3 +55,34 @@ async def speak_text(
         return Response(content=audio_bytes, media_type="audio/mp3")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TTS synthesis error: {str(e)}")
+
+
+# ── Live Voice Soundbox Payment Announcements ────────────────────────
+
+@router.get("/payment-announcements")
+def get_payment_announcements(
+    merchant_id: Optional[int] = Query(None, description="Filter by merchant ID (defaults to active store)"),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns unacknowledged payment arrival events for the store.
+    Used by the frontend speaker to announce customer payments in real-time (Soundbox mode).
+    """
+    from backend.app.services.payment_announcement_service import payment_announcement_service
+    from backend.app.services.sales_service import sales_service
+
+    if merchant_id is None:
+        active_m = sales_service.get_or_create_merchant(db)
+        merchant_id = active_m.id if active_m else 1
+
+    return payment_announcement_service.get_unannounced_for_merchant(merchant_id=merchant_id)
+
+
+@router.post("/payment-announcements/{announcement_id}/ack")
+def acknowledge_payment_announcement(announcement_id: str):
+    """
+    Marks a payment arrival announcement as acknowledged after speaker playback.
+    """
+    from backend.app.services.payment_announcement_service import payment_announcement_service
+    success = payment_announcement_service.acknowledge_announcement(announcement_id)
+    return {"acknowledged": success, "id": announcement_id}

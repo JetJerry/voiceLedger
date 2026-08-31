@@ -36,7 +36,7 @@
         <span>Razorpay Test Mode</span>
       </div>
       <div class="status-pill ai-pill">
-        <span class="sparkle">✨</span>
+      <span class="sparkle-icon"></span>
         <span id="ai-engine-label">Voice Agent Ready</span>
       </div>
     </div>
@@ -47,7 +47,7 @@
     <section class="voice-assistant-card glass-panel">
       <div class="voice-card-header">
         <div class="voice-title-wrap">
-          <span class="mic-wave-icon">🎙️</span>
+          <!-- decorative mic removed for a cleaner look -->
           <div>
             <h2>Speak or Check Payment Arrival</h2>
             <p>Speak sold products or ask: <em>"Payment aaya kya?"</em></p>
@@ -81,15 +81,15 @@
       <!-- Quick Action Sample Prompts -->
       <div class="prompt-chips">
         <span class="chips-label">Quick Actions:</span>
-        <button class="chip chip-action" data-prompt="Payment aaya kya?">🔍 Payment aaya kya?</button>
-        <button class="chip" data-prompt="2 coffee aur 1 sandwich 120 rupaye">☕ 2 Coffee + Sandwich (₹120)</button>
-        <button class="chip" data-prompt="3 notebook 150 rs">📚 3 Notebook (₹150)</button>
-        <button class="chip" data-prompt="Kitna pending hai?">❓ Total Pending</button>
+        <button class="chip chip-action" data-prompt="Payment aaya kya?">Payment aaya kya?</button>
+        <button class="chip" data-prompt="2 coffee aur 1 sandwich 120 rupaye">2 Coffee + Sandwich (₹120)</button>
+        <button class="chip" data-prompt="3 notebook 150 rs">3 Notebook (₹150)</button>
+        <button class="chip" data-prompt="Kitna pending hai?">Total Pending</button>
       </div>
 
       <!-- Live Agent Response Banner -->
       <div id="agent-response-box" class="agent-response-box hidden">
-        <div class="agent-avatar">🤖</div>
+        <div class="agent-avatar"></div>
         <div class="agent-msg-content">
           <div class="agent-name">VoiceLedger Agent</div>
           <div id="agent-reply-text" class="agent-text">Checking status...</div>
@@ -101,7 +101,7 @@
     <!-- Metrics Grid -->
     <section class="metrics-grid">
       <div class="metric-card glass-panel card-sales">
-        <div class="metric-icon">💰</div>
+        <div class="metric-icon"></div>
         <div class="metric-details">
           <div class="metric-label">Today's Sales</div>
           <div id="metric-today-sales" class="metric-value">₹0.00</div>
@@ -109,7 +109,7 @@
       </div>
 
       <div class="metric-card glass-panel card-collected">
-        <div class="metric-icon">✅</div>
+        <div class="metric-icon"></div>
         <div class="metric-details">
           <div class="metric-label">Total Collected</div>
           <div id="metric-collected" class="metric-value text-success">₹0.00</div>
@@ -117,7 +117,7 @@
       </div>
 
       <div class="metric-card glass-panel card-outstanding">
-        <div class="metric-icon">⚠️</div>
+        <div class="metric-icon"></div>
         <div class="metric-details">
           <div class="metric-label">Total Outstanding</div>
           <div id="metric-outstanding" class="metric-value text-danger">₹0.00</div>
@@ -125,7 +125,7 @@
       </div>
 
       <div class="metric-card glass-panel card-counts">
-        <div class="metric-icon">📊</div>
+        <div class="metric-icon"></div>
         <div class="metric-details">
           <div class="metric-label">Transactions Status</div>
           <div class="badge-row">
@@ -186,7 +186,7 @@
   <div id="simulate-modal" class="modal-overlay hidden">
     <div class="modal-card glass-panel">
       <div class="modal-header">
-        <h3>⚡ Simulate Customer Payment</h3>
+      <h3>Simulate Customer Payment</h3>
         <button id="close-modal-btn" class="close-btn">&times;</button>
       </div>
       <div class="modal-body">

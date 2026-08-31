@@ -22,7 +22,7 @@ export default function MetricsGrid({ summary }) {
       {/* 1. Today's Sales */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardEmoji}>💰</Text>
+          <View style={[styles.cardDot, styles.dotSales]} />
           <Text style={styles.cardLabel}>Today's Sales</Text>
         </View>
         <Text style={styles.cardValue}>{formatCurrency(todaySales)}</Text>
@@ -31,7 +31,7 @@ export default function MetricsGrid({ summary }) {
       {/* 2. Total Collected */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardEmoji}>✅</Text>
+          <View style={[styles.cardDot, styles.dotCollected]} />
           <Text style={styles.cardLabel}>Total Collected</Text>
         </View>
         <Text style={[styles.cardValue, { color: colors.accentEmerald }]}>
@@ -42,7 +42,7 @@ export default function MetricsGrid({ summary }) {
       {/* 3. Total Outstanding */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardEmoji}>⚠️</Text>
+          <View style={[styles.cardDot, styles.dotOutstanding]} />
           <Text style={styles.cardLabel}>Total Outstanding</Text>
         </View>
         <Text style={[styles.cardValue, { color: colors.accentRose }]}>
@@ -53,7 +53,7 @@ export default function MetricsGrid({ summary }) {
       {/* 4. Transactions Counts */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardEmoji}>📊</Text>
+          <View style={[styles.cardDot, styles.dotTransactions]} />
           <Text style={styles.cardLabel}>Transactions Status</Text>
         </View>
         <View style={styles.badgeRow}>
@@ -102,9 +102,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  cardEmoji: {
-    fontSize: 18,
+  cardDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     marginRight: 8,
+    alignSelf: 'center',
+  },
+  dotSales: {
+    backgroundColor: colors.primary,
+  },
+  dotCollected: {
+    backgroundColor: colors.accentEmerald,
+  },
+  dotOutstanding: {
+    backgroundColor: colors.accentRose,
+  },
+  dotTransactions: {
+    backgroundColor: colors.textSecondary,
   },
   cardLabel: {
     fontSize: 13,

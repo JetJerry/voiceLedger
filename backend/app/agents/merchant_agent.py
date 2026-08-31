@@ -57,13 +57,13 @@ class MerchantAgent:
             if target_sale:
                 items_str = ", ".join([f"{it.quantity}x {it.product_name}" for it in target_sale.items]) or "Sold item"
                 if target_sale.status == "PAID":
-                    agent_reply = f"Haan! {items_str} ka Rs. {target_sale.total_amount:.2f} payment receive ho chuka hai (PAID ✅)."
+                    agent_reply = f"Haan. {items_str} ka Rs. {target_sale.total_amount:.2f} payment mil chuka hai. Status: PAID."
                 elif target_sale.status == "PARTIAL":
-                    agent_reply = f"{items_str} ke liye Rs. {target_sale.received_amount:.2f} receive hua hai, lekin Rs. {target_sale.outstanding_amount:.2f} abhi pending hai (PARTIAL ⚠️)."
+                    agent_reply = f"{items_str} ke liye Rs. {target_sale.received_amount:.2f} receive hua hai, lekin Rs. {target_sale.outstanding_amount:.2f} abhi pending hai. Status: PARTIAL."
                 elif target_sale.status == "FAILED":
-                    agent_reply = f"{items_str} ka payment fail ho gaya hai (FAILED ❌)."
+                    agent_reply = f"{items_str} ka payment fail ho gaya hai. Status: FAILED."
                 else:
-                    agent_reply = f"Nahi, {items_str} ka Rs. {target_sale.outstanding_amount:.2f} payment abhi tak nahi aaya hai (PENDING ⏳)."
+                    agent_reply = f"Nahi. {items_str} ka Rs. {target_sale.outstanding_amount:.2f} payment abhi tak nahi aaya hai. Status: PENDING."
 
                 # Generate TTS voice audio
                 audio_base64 = tts_service.generate_speech_base64(agent_reply, lang=request.voice_lang) if request.speak_response else None
@@ -152,7 +152,7 @@ class MerchantAgent:
                     added_products.append(prod)
 
                 summary_str = ", ".join([f"{p.name.title()} (Rs. {p.price:.2f})" for p in added_products])
-                agent_reply = f"Naya item {summary_str} aapke catalog me add ho gaya hai! ✅"
+                agent_reply = f"Naya item {summary_str} aapke catalog me successfully add kar diya gaya hai."
                 spoken_text = f"{summary_str} catalog me add ho gaya hai."
                 audio_base64 = tts_service.generate_speech_base64(spoken_text, lang=request.voice_lang) if request.speak_response else None
 

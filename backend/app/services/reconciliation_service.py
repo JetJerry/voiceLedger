@@ -105,8 +105,20 @@ class ReconciliationService:
             if target_sale.received_amount == 0:
                 target_sale.status = "FAILED"
 
-        db.commit()
-        db.refresh(target_sale)
+        # 6. Trigger Live Voice Soundbox Announcement
+        try:
+            from backend.app.services.payment_announcement_service import payment_announcement_service
+            items_data = [{"product_name": it.product_name, "quantity": it.quantity} for it in target_sale.items]
+            payment_announcement_service.create_announcement(
+                sale_id=target_sale.id,
+                merchant_id=target_sale.merchant_id,
+                amount=amount_in_inr,
+                status=target_sale.status,
+                customer_name=target_sale.customer_name,
+                items=items_data
+            )
+        except Exception as e:
+            pass
 
         return {
             "result": "MATCHED",
