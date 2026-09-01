@@ -207,7 +207,7 @@ export default function AdminDashboard({ onSwitchToTerminal, onRefreshApp }) {
 
         <View style={[styles.kpiCard, isMobile ? styles.kpiFull : styles.kpiQuarter]}>
           <View style={styles.kpiHeader}>
-            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+            <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(15, 23, 42, 0.05)' }]}>
               <Store size={15} color={colors.textSecondary} />
             </View>
             <Text style={styles.kpiLabel}>Registered Stores</Text>
@@ -538,10 +538,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   kpiCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 16,
   },
   kpiQuarter: {
@@ -599,17 +599,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   searchBarContainer: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 14,
     marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     marginRight: 6,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterChipTextActive: {
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     fontWeight: '700',
   },
   merchantGrid: {
@@ -663,10 +663,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   merchantCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 16,
     flex: 1,
     minWidth: 280,
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -716,7 +716,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   catBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
@@ -761,7 +761,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusToggleInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderColor: colors.borderColor,
   },
   statusToggleText: {
@@ -775,7 +775,7 @@ const styles = StyleSheet.create({
   mStatsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
   },
   progressBarBg: {
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchStoreBtnText: {
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     fontWeight: '600',
     fontSize: 11,
   },
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
   emptyBox: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -885,10 +885,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modalCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 20,
     width: '100%',
     maxWidth: 480,
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   formInput: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   catSelectChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderColor: colors.borderColor,
     borderWidth: 1,
     borderRadius: 6,
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   catSelectChipTextActive: {
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     fontWeight: '700',
   },
   modalActions: {
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
   },
   cancelBtnText: {
     color: colors.textSecondary,

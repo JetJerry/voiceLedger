@@ -147,10 +147,10 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 20,
   },
   modalHeader: {
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   },
   quickBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   quickBtnText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#a5b4fc',
+    color: colors.primary,
   },
   submitBtn: {
     backgroundColor: colors.primary,

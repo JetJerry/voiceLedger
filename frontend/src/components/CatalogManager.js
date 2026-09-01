@@ -765,17 +765,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   filterCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 14,
     marginBottom: 16,
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     marginRight: 6,
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyBox: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -863,7 +863,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   businessTypeCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
   voiceTextInput: {
     flex: 1,
     height: 42,
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 10,
@@ -974,7 +974,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   voiceChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(15, 23, 42, 0.06)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -1014,10 +1014,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   productCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 14,
     flex: 1,
     minWidth: 260,
@@ -1042,11 +1042,11 @@ const styles = StyleSheet.create({
   },
   catPillText: {
     fontSize: 10,
-    color: '#a5b4fc',
+    color: colors.primary,
     fontWeight: '600',
   },
   unitPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -1087,7 +1087,7 @@ const styles = StyleSheet.create({
   },
   attrTag: {
     flexDirection: 'row',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -1147,10 +1147,10 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 520,
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     maxHeight: '90vh',
   },
   modalCardMobile: {
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   textInput: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   presetChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   templateBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 4,
@@ -1301,7 +1301,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   attrInput: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -1325,7 +1325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
   },
   btnCancelText: {
     color: colors.textSecondary,

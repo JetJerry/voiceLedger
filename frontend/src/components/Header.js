@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderColor,
-    backgroundColor: '#0d131f',
+    backgroundColor: '#F8FAFC',
   },
   topRow: {
     flexDirection: 'row',
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   storeBadgeText: {
-    color: '#a5b4fc',
+    color: colors.primary,
     fontSize: 11,
     fontWeight: '600',
   },
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   adminBadgeText: {
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   navTabs: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderRadius: 10,
     padding: 3,
     borderWidth: 1,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 480,
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   ipInput: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 8,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnCancel: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
   },
   btnCancelText: {
     color: colors.textSecondary,

@@ -126,7 +126,7 @@ export default function VoiceAssistantCard({ onActionComplete }) {
           <View>
             <Text style={styles.cardTitle}>Voice Transaction & Settlement Terminal</Text>
             <Text style={styles.cardSubtitle}>
-              Speak sales entries or ask: <Text style={{ fontStyle: 'italic', color: '#a5b4fc' }}>"Payment aaya kya?"</Text>
+              Speak sales entries or ask: <Text style={{ fontStyle: 'italic', color: colors.primary }}>"Payment aaya kya?"</Text>
             </Text>
           </View>
         </View>
@@ -223,10 +223,10 @@ export default function VoiceAssistantCard({ onActionComplete }) {
 
 const styles = StyleSheet.create({
   cardContainer: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 22,
     marginBottom: 20,
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 8,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   chipTextHighlight: {
-    color: '#a5b4fc',
+    color: colors.primary,
     fontWeight: '600',
   },
   responseBox: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   agentName: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#a5b4fc',
+    color: colors.primary,
   },
   actionTag: {
     backgroundColor: 'rgba(99, 102, 241, 0.2)',

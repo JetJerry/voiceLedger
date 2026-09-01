@@ -70,7 +70,7 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
       <View style={styles.actionsRow}>
         {sale.razorpay_payment_link_url ? (
           <TouchableOpacity style={styles.btnRzp} onPress={handleOpenRzpLink} activeOpacity={0.8}>
-            <ExternalLink size={13} color="#a5b4fc" style={{ marginRight: 5 }} />
+            <ExternalLink size={13} color={colors.primary} style={{ marginRight: 5 }} />
             <Text style={styles.btnRzpText}>Payment Link</Text>
           </TouchableOpacity>
         ) : null}
@@ -92,9 +92,9 @@ export default function SaleItemRow({ sale, onSimulatePayment }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0d131f',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: 10,
     padding: 14,
   },
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(15, 23, 42, 0.03)',
   },
   finCol: {
     alignItems: 'center',
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   btnRzpText: {
     fontSize: 11,
-    color: '#a5b4fc',
+    color: colors.primary,
     fontWeight: '600',
   },
   btnSim: {

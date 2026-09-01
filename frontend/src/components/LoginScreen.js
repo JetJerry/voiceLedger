@@ -411,7 +411,7 @@ export default function LoginScreen({ onLoginSuccess }) {
         {selectedRole === 'admin' && (
           <View style={styles.formWrap}>
             <View style={styles.adminInfoBanner}>
-              <ShieldCheck size={16} color="#c4b5fd" style={{ marginRight: 8, marginTop: 1 }} />
+              <ShieldCheck size={16} color={colors.accentViolet} style={{ marginRight: 8, marginTop: 1 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.adminInfoTitle}>Platform Administration Hub</Text>
                 <Text style={styles.adminInfoSub}>
@@ -539,16 +539,16 @@ const styles = StyleSheet.create({
   container: {
     minHeight: '100vh',
     width: '100%',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
   },
   card: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 32,
     width: '100%',
     maxWidth: 480,
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   roleTabsContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderRadius: 10,
     padding: 4,
     borderWidth: 1,
@@ -675,7 +675,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   textInput: {
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 8,
@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   catChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   quickAccountChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(15, 23, 42, 0.03)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 8,
@@ -774,7 +774,7 @@ const styles = StyleSheet.create({
   adminInfoTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     marginBottom: 2,
   },
   adminInfoSub: {
@@ -792,7 +792,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   quickAdminBtnText: {
-    color: '#c4b5fd',
+    color: colors.accentViolet,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -806,12 +806,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'rgba(15, 23, 42, 0.02)',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(15, 23, 42, 0.05)',
   },
   serverStatusLeft: {
     flexDirection: 'row',
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   },
   serverConfigBox: {
     marginTop: 8,
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
@@ -859,7 +859,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   serverConfigInput: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   serverActionBtnReset: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.05)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,

@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     paddingHorizontal: 10,
@@ -385,16 +385,16 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   periodTabsCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 18,
     marginBottom: 16,
   },
   periodTabsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(15, 23, 42, 0.03)',
     borderRadius: 8,
     padding: 3,
     borderWidth: 1,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    backgroundColor: 'rgba(15, 23, 42, 0.02)',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
   topProductChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
     color: colors.accentEmerald,
   },
   sectionCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 18,
   },
   ledgerHeader: {
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   countPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -548,7 +548,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0b0f19',
+    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,

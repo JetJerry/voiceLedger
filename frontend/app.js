@@ -157,7 +157,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.rootContainer}>
-      <StatusBar barStyle="light-content" backgroundColor="#0b0f19" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       {/* Fixed App Header with Nav Tabs & Logout */}
       <Header
@@ -318,7 +318,7 @@ export default function App() {
 const styles = StyleSheet.create({
   rootContainer: {
     flex: 1,
-    backgroundColor: '#0b0f19',
+    backgroundColor: colors.bg,
     minHeight: '100vh',
     width: '100%',
   },
@@ -364,10 +364,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 16,
   },
   quickNavIconWrap: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   soundboxDismissBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
     width: 24,
     height: 24,
     borderRadius: 12,

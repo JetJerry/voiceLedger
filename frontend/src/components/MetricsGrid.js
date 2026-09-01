@@ -60,7 +60,7 @@ export default function MetricsGrid({ summary }) {
       {/* 4. Transactions Counts */}
       <View style={[styles.metricCard, isMobile ? styles.cardFullWidth : styles.cardQuarter]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.iconWrap, { backgroundColor: 'rgba(255, 255, 255, 0.05)' }]}>
+          <View style={[styles.iconWrap, { backgroundColor: 'rgba(15, 23, 42, 0.05)' }]}>
             <CreditCard size={16} color={colors.textSecondary} />
           </View>
           <Text style={styles.cardLabel}>Transaction Status</Text>
@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   metricCard: {
-    backgroundColor: '#111827',
+    backgroundColor: colors.bgCard,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.borderColor,
     padding: 16,
   },
   cardQuarter: {
