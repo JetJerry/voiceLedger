@@ -11,14 +11,20 @@ export const apiService = {
     return await res.json();
   },
 
-  async processVoiceCommand(text, context = 'terminal') {
+  async processVoiceCommand(text, context = 'terminal', history = []) {
     const base = getApiBase();
     const res = await fetch(`${base}/voice/process-text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text, speak_response: true, voice_lang: 'hi', context }),
+      body: JSON.stringify({
+        text,
+        speak_response: true,
+        voice_lang: 'hi',
+        context,
+        history,
+      }),
     });
     if (!res.ok) {
       throw new Error(`Voice processing error: ${res.status}`);

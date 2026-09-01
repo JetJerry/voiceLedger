@@ -1,4 +1,4 @@
-"""Tests for anti-hallucination guards, empty catalog, and catalog voice intents."""
+"""Tests for anti-hallucination guards, empty catalog, and multi-turn catalog voice intents."""
 from unittest.mock import patch
 from backend.app.services.llm_service import llm_service
 from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult, VoiceItemExtracted
@@ -49,3 +49,77 @@ def test_merchant_agent_list_catalog(db_session):
         )
         assert resp.action_taken == "CATALOG_LISTED"
         assert "items" in resp.agent_reply.lower() or "catalog" in resp.agent_reply.lower()
+
+
+def test_multi_turn_catalog_add_product(db_session):
+    # Turn 1: User says "Add product" without price/name
+    turn1_extraction = VoiceExtractionResult(
+        intent="add_to_catalog",
+        raw_text="Add product",
+        items=[],
+        explanation="Product add karne ke liye product ka naam aur price bolein.",
+    )
+
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=turn1_extraction):
+        resp1 = merchant_agent.process_merchant_command(
+            db_session,
+            VoiceProcessRequest(
+                text="Add product",
+                context="catalog",
+                speak_response=False,
+            ),
+        )
+        assert resp1.action_taken == "CATALOG_ADD_PRICE_REQUIRED"
+        assert "naam" in resp1.agent_reply.lower() or "price" in resp1.agent_reply.lower() or "add" in resp1.agent_reply.lower()
+
+    # Turn 2: User responds "Burger 100 rupaye" with history
+    turn2_extraction = VoiceExtractionResult(
+        intent="add_to_catalog",
+        raw_text="Burger 100 rupaye",
+        items=[VoiceItemExtracted(product_name="cheeseburger", unit_price=100.0, category="Snacks")],
+        explanation="Cheeseburger Rs. 100 me catalog me add ho gaya.",
+    )
+
+    history = [
+        {"role": "user", "content": "Add product"},
+        {"role": "assistant", "content": resp1.agent_reply},
+    ]
+
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=turn2_extraction):
+        resp2 = merchant_agent.process_merchant_command(
+            db_session,
+            VoiceProcessRequest(
+                text="Burger 100 rupaye",
+                context="catalog",
+                speak_response=False,
+                history=history,
+            ),
+        )
+        assert resp2.action_taken in ["CATALOG_ITEM_ADDED", "CATALOG_ITEMS_ADDED"]
+        assert "cheeseburger" in resp2.agent_reply.lower()
+
+
+def test_catalog_search_product_price(db_session):
+    merchant = db_session.query(Merchant).filter(Merchant.is_current_active == True).first()
+    # Add a unique product
+    p = Product(merchant_id=merchant.id, name="Special Masala Dosa", price=85.0, unit="plate", category="South Indian", is_active=True)
+    db_session.add(p)
+    db_session.commit()
+
+    search_extraction = VoiceExtractionResult(
+        intent="search_catalog",
+        product_name="special masala dosa",
+        raw_text="Special Masala Dosa ka price kya hai",
+    )
+
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=search_extraction):
+        resp = merchant_agent.process_merchant_command(
+            db_session,
+            VoiceProcessRequest(
+                text="Special Masala Dosa ka price kya hai",
+                context="catalog",
+                speak_response=False,
+            ),
+        )
+        assert resp.action_taken == "CATALOG_SEARCHED"
+        assert "85" in resp.agent_reply or "dosa" in resp.agent_reply.lower()

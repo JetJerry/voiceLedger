@@ -105,3 +105,49 @@ def test_idempotent_reconciliation(db_session):
         sale_id=sale.id
     )
     assert res2["result"] == "ALREADY_PROCESSED"
+
+
+def test_payment_reconciliation_db_persistence(db_session):
+    from backend.app.models import Sale, Payment
+    from backend.app.api.dashboard import get_dashboard_summary
+
+    # 1. Create a sale
+    sale = sales_service.create_sale(
+        db_session,
+        SaleCreate(
+            customer_name="Priya",
+            items=[SaleItemCreate(product_name="notebook", quantity=3, unit_price=50.0)]
+        )
+    )
+    assert sale.status == "PENDING"
+    assert sale.total_amount == 150.0
+
+    # 2. Reconcile payment
+    reconciliation_service.process_payment_event(
+        db=db_session,
+        razorpay_payment_id="pay_persisted_test_123",
+        amount_in_inr=150.0,
+        status="captured",
+        sale_id=sale.id
+    )
+
+    # 3. Expire in-memory cache to force a fresh SELECT from SQLite
+    db_session.expire_all()
+
+    fresh_sale = db_session.query(Sale).filter(Sale.id == sale.id).first()
+    assert fresh_sale.status == "PAID"
+    assert fresh_sale.received_amount == 150.0
+    assert fresh_sale.outstanding_amount == 0.0
+
+    # 4. Verify Payment record exists in DB
+    payment = db_session.query(Payment).filter(Payment.razorpay_payment_id == "pay_persisted_test_123").first()
+    assert payment is not None
+    assert payment.amount == 150.0
+    assert payment.status == "captured"
+
+    # 5. Verify Dashboard summary reflects updated paid status
+    summary = get_dashboard_summary(merchant_id=sale.merchant_id, db=db_session)
+    assert summary.paid_count >= 1
+    found = any(s.id == sale.id and s.status == "PAID" and s.received_amount == 150.0 for s in summary.recent_sales)
+    assert found is True
+

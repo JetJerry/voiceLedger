@@ -29,6 +29,7 @@ class VoiceProcessRequest(BaseModel):
     speak_response: bool = Field(default=True, description="Whether to generate TTS neural voice audio")
     voice_lang: str = Field(default="hi", description="hi (Hindi) or en (English)")
     context: str = Field(default="terminal", description="terminal or catalog — adjusts intent priority")
+    history: Optional[List[dict]] = Field(default_factory=list, description="Recent conversation turns list of {role, content}")
 
 
 class VoiceProcessResponse(BaseModel):

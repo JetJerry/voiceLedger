@@ -33,6 +33,9 @@ class SaleCreate(BaseModel):
     auto_create_payment_link: bool = True
 
 
+from backend.app.schemas.payment import PaymentResponse
+
+
 class SaleResponse(BaseModel):
     id: str
     merchant_id: int
@@ -47,6 +50,7 @@ class SaleResponse(BaseModel):
     raw_voice_transcript: Optional[str] = None
     created_at: datetime
     items: List[SaleItemResponse] = []
+    payments: List[PaymentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,18 @@ import {
   Edit3,
   Trash2,
   Tag,
-  SlidersHorizontal,
   PackageOpen,
   X,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  ArrowUpDown,
   Layers,
+  Sparkles,
+  Check,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react-native';
 import { colors } from '../theme/colors';
 import { apiService } from '../services/apiService';
@@ -61,9 +68,12 @@ const DOMAIN_TEMPLATES = {
 const CATALOG_VOICE_PROMPTS = [
   { label: '🍽️ Menu dikhao', prompt: 'Menu dikhao' },
   { label: '➕ Chai add karo ₹20', prompt: 'Menu mein chai add karo 20 rupaye' },
+  { label: '➕ Burger 100 rs', prompt: 'Burger 100 rupaye' },
   { label: '🔍 Coffee ka price?', prompt: 'Coffee ka price kya hai' },
   { label: '📋 Catalog list', prompt: 'Catalog batao kitne items hain' },
 ];
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 'ALL'];
 
 export default function CatalogManager({ onCatalogUpdated }) {
   const { width } = useWindowDimensions();
@@ -74,19 +84,27 @@ export default function CatalogManager({ onCatalogUpdated }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
 
+  // Sorting & Pagination State
+  const [sortField, setSortField] = useState('name'); // 'name' | 'price' | 'category'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [expandedRows, setExpandedRows] = useState({}); // { [productId]: boolean }
+  const [allExpanded, setAllExpanded] = useState(false);
+
   // Modal State
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null); // null = add, object = edit
+  const [editingProduct, setEditingProduct] = useState(null);
   const [formName, setFormName] = useState('');
   const [formPrice, setFormPrice] = useState('');
   const [formCategory, setFormCategory] = useState('General');
   const [formUnit, setFormUnit] = useState('piece');
   const [formDescription, setFormDescription] = useState('');
-  const [formAttributes, setFormAttributes] = useState([]); // [{ key: '', value: '' }]
+  const [formAttributes, setFormAttributes] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // Business type & voice assistant state
+  // Business type & Multi-turn voice assistant state
   const [businessTypes, setBusinessTypes] = useState([]);
   const [selectedBusinessType, setSelectedBusinessType] = useState('Kirana & Retail');
   const [businessPresets, setBusinessPresets] = useState({});
@@ -95,6 +113,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [voiceResponse, setVoiceResponse] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [catalogConversationHistory, setCatalogConversationHistory] = useState([]);
 
   const loadProducts = useCallback(async () => {
     try {
@@ -169,15 +188,24 @@ export default function CatalogManager({ onCatalogUpdated }) {
     setIsVoiceProcessing(true);
     setVoiceResponse({ reply: 'Catalog assistant is processing...', action: 'Processing' });
 
+    const currentHistory = [...catalogConversationHistory, { role: 'user', content: query }];
+
     try {
-      const data = await apiService.processVoiceCommand(query, 'catalog');
+      const data = await apiService.processVoiceCommand(query, 'catalog', currentHistory);
+      const reply = data.agent_reply || 'Done.';
+      
+      const updatedHistory = [...currentHistory, { role: 'assistant', content: reply }].slice(-10);
+      setCatalogConversationHistory(updatedHistory);
+
       setVoiceResponse({
-        reply: data.agent_reply || 'Done.',
+        reply,
         action: data.action_taken || 'Completed',
       });
+
       if (data.audio_base64 || data.agent_reply) {
         voiceService.playTTSAudio(data.audio_base64, data.agent_reply);
       }
+
       setCatalogVoiceText('');
       await loadProducts();
       if (onCatalogUpdated) onCatalogUpdated();
@@ -217,7 +245,6 @@ export default function CatalogManager({ onCatalogUpdated }) {
     setFormUnit(product.unit || 'piece');
     setFormDescription(product.description || '');
 
-    // Convert attributes dict to array
     const rawAttrs = product.attributes || {};
     const attrsArr = Object.entries(rawAttrs).map(([k, v]) => ({ key: k, value: String(v) }));
     setFormAttributes(attrsArr);
@@ -311,42 +338,146 @@ export default function CatalogManager({ onCatalogUpdated }) {
     }
   };
 
-  const categories = ['ALL', ...Array.from(new Set(products.map((p) => p.category || 'General')))];
+  const toggleRowExpanded = (id) => {
+    setExpandedRows((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedCategory !== 'ALL' && (p.category || 'General') !== selectedCategory) {
-      return false;
+  const toggleAllRows = () => {
+    if (allExpanded) {
+      setExpandedRows({});
+      setAllExpanded(false);
+    } else {
+      const allObj = {};
+      products.forEach((p) => {
+        allObj[p.id] = true;
+      });
+      setExpandedRows(allObj);
+      setAllExpanded(true);
     }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchName = (p.name || '').toLowerCase().includes(q);
-      const matchCat = (p.category || '').toLowerCase().includes(q);
-      const matchDesc = (p.description || '').toLowerCase().includes(q);
-      return matchName || matchCat || matchDesc;
+  };
+
+  const toggleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
     }
-    return true;
-  });
+    setCurrentPage(1);
+  };
+
+  const categories = useMemo(() => {
+    return ['ALL', ...Array.from(new Set(products.map((p) => p.category || 'General')))];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedCategory !== 'ALL' && (p.category || 'General') !== selectedCategory) {
+        return false;
+      }
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = (p.name || '').toLowerCase().includes(q);
+        const matchCat = (p.category || '').toLowerCase().includes(q);
+        const matchDesc = (p.description || '').toLowerCase().includes(q);
+        const matchAttrs = Object.entries(p.attributes || {}).some(
+          ([k, v]) => k.toLowerCase().includes(q) || String(v).toLowerCase().includes(q)
+        );
+        return matchName || matchCat || matchDesc || matchAttrs;
+      }
+      return true;
+    });
+  }, [products, selectedCategory, searchQuery]);
+
+  const sortedProducts = useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      let valA = a[sortField] || '';
+      let valB = b[sortField] || '';
+
+      if (sortField === 'price') {
+        valA = Number(valA) || 0;
+        valB = Number(valB) || 0;
+      } else {
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredProducts, sortField, sortOrder]);
+
+  const totalPages = pageSize === 'ALL' ? 1 : Math.max(1, Math.ceil(sortedProducts.length / pageSize));
+  
+  const paginatedProducts = useMemo(() => {
+    if (pageSize === 'ALL') return sortedProducts;
+    const startIdx = (currentPage - 1) * pageSize;
+    return sortedProducts.slice(startIdx, startIdx + pageSize);
+  }, [sortedProducts, currentPage, pageSize]);
+
+  const stats = useMemo(() => {
+    const totalCount = products.length;
+    const distinctCats = new Set(products.map((p) => p.category || 'General')).size;
+    const avgPrice = totalCount > 0 ? products.reduce((acc, p) => acc + (p.price || 0), 0) / totalCount : 0;
+    return {
+      totalCount,
+      distinctCats,
+      avgPrice: avgPrice.toFixed(2),
+    };
+  }, [products]);
 
   return (
     <View style={styles.container}>
-      {/* 1. Header Bar */}
+      {/* 1. Header Bar & Quick Metrics */}
       <View style={[styles.headerRow, isMobile && styles.headerRowMobile]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Product Catalog & Inventory</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <View style={styles.headerBadge}>
+              <Package size={18} color="#ffffff" strokeWidth={2.4} />
+            </View>
+            <Text style={styles.title}>Product Catalog & Inventory</Text>
+          </View>
           <Text style={styles.subtitle}>
-            Dynamic multi-domain inventory with custom attributes for grocery, pharmacy, food, fashion, and hardware.
+            High-density tabular ledger for {stats.totalCount} products across {stats.distinctCats} categories with dynamic multi-domain specifications.
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.addItemBtn} onPress={openAddModal} activeOpacity={0.8}>
-          <Plus size={15} color="#ffffff" style={{ marginRight: 6 }} />
+        <TouchableOpacity style={styles.addItemBtn} onPress={openAddModal} activeOpacity={0.85}>
+          <Plus size={16} color="#ffffff" strokeWidth={2.4} style={{ marginRight: 6 }} />
           <Text style={styles.addItemBtnText}>Add Product</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Business Type Selector */}
+      {/* Metrics Strip */}
+      <View style={styles.metricsStrip}>
+        <View style={styles.metricItem}>
+          <Text style={styles.metricVal}>{stats.totalCount}</Text>
+          <Text style={styles.metricLabel}>Total Items</Text>
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={styles.metricVal}>{stats.distinctCats}</Text>
+          <Text style={styles.metricLabel}>Categories</Text>
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={[styles.metricVal, { color: colors.accentEmerald }]}>₹{stats.avgPrice}</Text>
+          <Text style={styles.metricLabel}>Avg. Unit Price</Text>
+        </View>
+        <View style={styles.metricDivider} />
+        <View style={styles.metricItem}>
+          <Text style={[styles.metricVal, { color: colors.primary }]}>{filteredProducts.length}</Text>
+          <Text style={styles.metricLabel}>Filtered Count</Text>
+        </View>
+      </View>
+
+      {/* Store Type Selector */}
       <View style={styles.businessTypeCard}>
-        <Text style={styles.businessTypeLabel}>🏪 Store Type (flexible — add any items you want)</Text>
+        <Text style={styles.businessTypeLabel}>🏪 Store Business Profile (Adaptive Schema)</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.businessTypeScroll}>
           {(businessTypes.length ? businessTypes : [{ id: 'Kirana & Retail', label: '🏪 Kirana & Retail' }]).map((bt) => {
             const isActive = selectedBusinessType === bt.id;
@@ -369,14 +500,18 @@ export default function CatalogManager({ onCatalogUpdated }) {
         ) : null}
       </View>
 
-      {/* Voice-Assisted Catalog Panel */}
+      {/* Voice Assistant Panel with Multi-turn Memory */}
       <View style={styles.voicePanel}>
         <View style={styles.voicePanelHeader}>
-          <Text style={styles.voicePanelTitle}>🎙️ Voice-Assisted Catalog</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={16} color={colors.primary} />
+            <Text style={styles.voicePanelTitle}>Voice-Assisted Catalog Assistant</Text>
+          </View>
           <Text style={styles.voicePanelSub}>
-            Add, search, or list items by voice — catalog adapts to your store type
+            Multi-turn voice commands: "Add products" &gt; "Burger 100 rs", or "Menu dikhao", "Chai ka price?"
           </Text>
         </View>
+
         <View style={styles.voiceInputRow}>
           <TouchableOpacity
             style={[styles.voiceMicBtn, isRecording && styles.voiceMicBtnActive]}
@@ -386,7 +521,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
           </TouchableOpacity>
           <TextInput
             style={styles.voiceTextInput}
-            placeholder="Bolein: 'Menu mein dosa add karo 80 rupaye' ya 'Menu dikhao'"
+            placeholder="Bolein: 'Menu mein burger add karo 100 rupaye' ya 'Menu dikhao'..."
             placeholderTextColor={colors.textMuted}
             value={catalogVoiceText}
             onChangeText={setCatalogVoiceText}
@@ -400,10 +535,11 @@ export default function CatalogManager({ onCatalogUpdated }) {
             {isVoiceProcessing ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.voiceSendText}>Go</Text>
+              <Text style={styles.voiceSendText}>Send</Text>
             )}
           </TouchableOpacity>
         </View>
+
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.voiceChipsScroll}>
           {CATALOG_VOICE_PROMPTS.map((item, idx) => (
             <TouchableOpacity
@@ -418,6 +554,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
         {voiceResponse ? (
           <View style={styles.voiceResponseBox}>
             <Text style={styles.voiceResponseAction}>{voiceResponse.action}</Text>
@@ -426,24 +563,46 @@ export default function CatalogManager({ onCatalogUpdated }) {
         ) : null}
       </View>
 
-      {/* 2. Search & Filter Bar */}
-      <View style={styles.filterCard}>
-        <View style={styles.searchInputWrapper}>
-          <Search size={15} color={colors.textMuted} style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search items by name, category, or description..."
-            placeholderTextColor={colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn}>
-              <Text style={styles.clearBtnText}>Clear</Text>
-            </TouchableOpacity>
-          ) : null}
+      {/* 2. Search, Category Filters, & Table Controls Bar */}
+      <View style={styles.controlsCard}>
+        {/* Search Input Row */}
+        <View style={styles.searchRow}>
+          <View style={styles.searchInputWrapper}>
+            <Search size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search 100s of products by name, category, or specifications..."
+              placeholderTextColor={colors.textMuted}
+              value={searchQuery}
+              onChangeText={(txt) => {
+                setSearchQuery(txt);
+                setCurrentPage(1);
+              }}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn}>
+                <X size={14} color={colors.textMuted} />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Expand/Collapse All Button */}
+          <TouchableOpacity style={styles.expandAllBtn} onPress={toggleAllRows}>
+            {allExpanded ? (
+              <>
+                <Minimize2 size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={styles.expandAllText}>Collapse All</Text>
+              </>
+            ) : (
+              <>
+                <Maximize2 size={14} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={styles.expandAllText}>Expand All Specs</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
+        {/* Category Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
           {categories.map((cat) => {
             const count = cat === 'ALL' ? products.length : products.filter((p) => (p.category || 'General') === cat).length;
@@ -452,7 +611,10 @@ export default function CatalogManager({ onCatalogUpdated }) {
               <TouchableOpacity
                 key={cat}
                 style={[styles.catChip, isActive && styles.catChipActive]}
-                onPress={() => setSelectedCategory(cat)}
+                onPress={() => {
+                  setSelectedCategory(cat);
+                  setCurrentPage(1);
+                }}
               >
                 <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                   {cat} ({count})
@@ -463,86 +625,300 @@ export default function CatalogManager({ onCatalogUpdated }) {
         </ScrollView>
       </View>
 
-      {/* 3. Products List / Grid */}
+      {/* 3. Tabular Product View */}
       {isLoading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading inventory records...</Text>
         </View>
-      ) : filteredProducts.length === 0 ? (
+      ) : sortedProducts.length === 0 ? (
         <View style={styles.emptyBox}>
-          <PackageOpen size={36} color={colors.textMuted} style={{ marginBottom: 8 }} />
+          <PackageOpen size={42} color={colors.textMuted} style={{ marginBottom: 10 }} />
           <Text style={styles.emptyTitle}>No products found</Text>
           <Text style={styles.emptySub}>
-            Select your store type above, then add items manually or use voice: &quot;Menu mein chai add karo 20 rupaye&quot;
+            {searchQuery ? 'No items match your search filter.' : 'Add your items manually or use voice: "Menu mein burger add karo 100 rupaye".'}
           </Text>
           <TouchableOpacity style={styles.emptyAddBtn} onPress={openAddModal}>
-            <Text style={styles.emptyAddBtnText}>➕ Add First Item</Text>
+            <Text style={styles.emptyAddBtnText}>➕ Add First Product</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={[styles.productGrid, isMobile && styles.productGridMobile]}>
-          {filteredProducts.map((p) => {
+        <View style={styles.tableCard}>
+          {/* Table Header */}
+          <View style={styles.tableHeaderRow}>
+            <View style={[styles.thCol, { width: 44, justifyContent: 'center' }]}>
+              <Text style={styles.thText}>#</Text>
+            </View>
+
+            <TouchableOpacity style={[styles.thCol, { flex: 2.2 }]} onPress={() => toggleSort('name')}>
+              <Text style={styles.thText}>Item Name & Details</Text>
+              <ArrowUpDown size={12} color={sortField === 'name' ? colors.primary : colors.textMuted} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.thCol, { flex: 1.2 }]} onPress={() => toggleSort('category')}>
+              <Text style={styles.thText}>Category</Text>
+              <ArrowUpDown size={12} color={sortField === 'category' ? colors.primary : colors.textMuted} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+
+            <View style={[styles.thCol, { flex: 1 }]}>
+              <Text style={styles.thText}>Unit</Text>
+            </View>
+
+            <TouchableOpacity style={[styles.thCol, { flex: 1.2, justifyContent: 'flex-end' }]} onPress={() => toggleSort('price')}>
+              <Text style={styles.thText}>Price</Text>
+              <ArrowUpDown size={12} color={sortField === 'price' ? colors.primary : colors.textMuted} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+
+            <View style={[styles.thCol, { flex: 1.8, paddingLeft: 12 }]}>
+              <Text style={styles.thText}>Specifications</Text>
+            </View>
+
+            <View style={[styles.thCol, { width: 90, justifyContent: 'center' }]}>
+              <Text style={styles.thText}>Actions</Text>
+            </View>
+          </View>
+
+          {/* Table Body Rows */}
+          {paginatedProducts.map((p, idx) => {
+            const rowIndex = pageSize === 'ALL' ? idx + 1 : (currentPage - 1) * pageSize + idx + 1;
+            const isExpanded = !!expandedRows[p.id];
             const attrs = p.attributes || {};
             const attrEntries = Object.entries(attrs);
+            const isEven = idx % 2 === 0;
 
             return (
-              <View key={p.id} style={styles.productCard}>
-                <View style={styles.cardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.categoryRow}>
-                      <View style={styles.catPill}>
-                        <Text style={styles.catPillText}>{p.category || 'General'}</Text>
-                      </View>
-                      {p.unit ? (
-                        <View style={styles.unitPill}>
-                          <Text style={styles.unitPillText}>per {p.unit}</Text>
+              <View key={p.id} style={[styles.tableRowWrapper, isEven ? styles.rowEven : styles.rowOdd]}>
+                {/* Main Row Content */}
+                <TouchableOpacity
+                  style={styles.tableRow}
+                  onPress={() => toggleRowExpanded(p.id)}
+                  activeOpacity={0.7}
+                >
+                  {/* Row # */}
+                  <View style={[styles.tdCol, { width: 44, justifyContent: 'center' }]}>
+                    <Text style={styles.rowIdxText}>{rowIndex}</Text>
+                  </View>
+
+                  {/* Name & Description */}
+                  <View style={[styles.tdCol, { flex: 2.2 }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={styles.prodNameText}>
+                        {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
+                      </Text>
+                      {attrEntries.length > 0 && (
+                        <View style={styles.specCountBadge}>
+                          <Text style={styles.specCountText}>{attrEntries.length} specs</Text>
                         </View>
-                      ) : null}
+                      )}
                     </View>
-                    <Text style={styles.prodName} numberOfLines={2}>
-                      {p.name.charAt(0).toUpperCase() + p.name.slice(1)}
-                    </Text>
+                    {p.description ? (
+                      <Text style={styles.prodDescShort} numberOfLines={1}>
+                        {p.description}
+                      </Text>
+                    ) : null}
                   </View>
 
-                  <View style={styles.priceContainer}>
-                    <Text style={styles.priceText}>₹{p.price.toFixed(2)}</Text>
+                  {/* Category */}
+                  <View style={[styles.tdCol, { flex: 1.2 }]}>
+                    <View style={styles.catPill}>
+                      <Text style={styles.catPillText}>{p.category || 'General'}</Text>
+                    </View>
                   </View>
-                </View>
 
-                {p.description ? (
-                  <Text style={styles.descText} numberOfLines={2}>
-                    {p.description}
-                  </Text>
-                ) : null}
+                  {/* Unit */}
+                  <View style={[styles.tdCol, { flex: 1 }]}>
+                    <Text style={styles.unitText}>{p.unit ? `per ${p.unit}` : 'per piece'}</Text>
+                  </View>
 
-                {/* Dynamic Attributes Tags */}
-                {attrEntries.length > 0 ? (
-                  <View style={styles.attrsContainer}>
-                    {attrEntries.map(([k, v]) => (
-                      <View key={k} style={styles.attrTag}>
-                        <Text style={styles.attrTagKey}>{k}: </Text>
-                        <Text style={styles.attrTagVal}>{String(v)}</Text>
+                  {/* Price */}
+                  <View style={[styles.tdCol, { flex: 1.2, justifyContent: 'flex-end' }]}>
+                    <View style={styles.pricePill}>
+                      <Text style={styles.priceText}>₹{p.price.toFixed(2)}</Text>
+                    </View>
+                  </View>
+
+                  {/* Specifications Preview */}
+                  <View style={[styles.tdCol, { flex: 1.8, paddingLeft: 12 }]}>
+                    {attrEntries.length > 0 ? (
+                      <View style={styles.attrPillWrap}>
+                        {attrEntries.slice(0, 2).map(([k, v]) => (
+                          <View key={k} style={styles.inlineAttrTag}>
+                            <Text style={styles.inlineAttrText}>
+                              {k}: {String(v)}
+                            </Text>
+                          </View>
+                        ))}
+                        {attrEntries.length > 2 ? (
+                          <Text style={styles.moreAttrsText}>+{attrEntries.length - 2} more</Text>
+                        ) : null}
                       </View>
-                    ))}
+                    ) : (
+                      <Text style={styles.noAttrsText}>Standard</Text>
+                    )}
                   </View>
-                ) : null}
 
-                {/* Actions Row */}
-                <View style={styles.cardFooter}>
-                  <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(p)}>
-                    <Edit3 size={13} color={colors.primary} style={{ marginRight: 5 }} />
-                    <Text style={styles.editBtnText}>Edit</Text>
-                  </TouchableOpacity>
+                  {/* Action Buttons & Expand Toggle */}
+                  <View style={[styles.tdCol, { width: 90, justifyContent: 'flex-end', gap: 6 }]}>
+                    <TouchableOpacity
+                      style={styles.actionIconBtn}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        openEditModal(p);
+                      }}
+                      title="Edit Product"
+                    >
+                      <Edit3 size={14} color={colors.primary} />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.delBtn} onPress={() => handleDeleteProduct(p.id)}>
-                    <Trash2 size={13} color={colors.accentRose} style={{ marginRight: 5 }} />
-                    <Text style={styles.delBtnText}>Deactivate</Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      style={[styles.actionIconBtn, { backgroundColor: 'rgba(239, 68, 68, 0.08)' }]}
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        handleDeleteProduct(p.id);
+                      }}
+                      title="Deactivate Product"
+                    >
+                      <Trash2 size={14} color={colors.accentRose} />
+                    </TouchableOpacity>
+
+                    <View style={styles.chevronWrap}>
+                      {isExpanded ? (
+                        <ChevronUp size={16} color={colors.primary} />
+                      ) : (
+                        <ChevronDown size={16} color={colors.textMuted} />
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Expandable Accordion Panel */}
+                {isExpanded && (
+                  <View style={styles.expandedPanel}>
+                    <View style={styles.expandedContentRow}>
+                      {/* Left: Full Description & Metadata */}
+                      <View style={styles.expandedLeft}>
+                        <Text style={styles.expandedSectionLabel}>Item Overview & Description</Text>
+                        <Text style={styles.expandedDescText}>
+                          {p.description || 'No detailed description provided for this product.'}
+                        </Text>
+                        <View style={styles.expandedMetaRow}>
+                          <Text style={styles.expandedMetaItem}>
+                            <Text style={styles.expandedMetaKey}>Product ID: </Text>#{p.id}
+                          </Text>
+                          <Text style={styles.expandedMetaItem}>
+                            <Text style={styles.expandedMetaKey}>Status: </Text>Active
+                          </Text>
+                          <Text style={styles.expandedMetaItem}>
+                            <Text style={styles.expandedMetaKey}>Unit Price: </Text>₹{p.price.toFixed(2)} / {p.unit || 'piece'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Right: Full Specifications Tags */}
+                      <View style={styles.expandedRight}>
+                        <Text style={styles.expandedSectionLabel}>Dynamic Domain Specifications</Text>
+                        {attrEntries.length > 0 ? (
+                          <View style={styles.expandedAttrsGrid}>
+                            {attrEntries.map(([k, v]) => (
+                              <View key={k} style={styles.fullAttrCard}>
+                                <Text style={styles.fullAttrKey}>{k}</Text>
+                                <Text style={styles.fullAttrVal}>{String(v)}</Text>
+                              </View>
+                            ))}
+                          </View>
+                        ) : (
+                          <Text style={styles.noSpecsText}>No custom specifications defined. Click Edit to add specs.</Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Expand Footer Quick Action */}
+                    <View style={styles.expandedFooter}>
+                      <TouchableOpacity
+                        style={styles.expandedEditBtn}
+                        onPress={() => openEditModal(p)}
+                      >
+                        <Edit3 size={13} color="#ffffff" style={{ marginRight: 5 }} />
+                        <Text style={styles.expandedEditBtnText}>Edit Product Details</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.expandedDelBtn}
+                        onPress={() => handleDeleteProduct(p.id)}
+                      >
+                        <Trash2 size={13} color={colors.accentRose} style={{ marginRight: 5 }} />
+                        <Text style={styles.expandedDelBtnText}>Deactivate Item</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
               </View>
             );
           })}
+
+          {/* Table Footer: Pagination & Rows-Per-Page Selector */}
+          <View style={styles.tableFooter}>
+            <View style={styles.footerLeft}>
+              <Text style={styles.pageInfoText}>
+                Showing{' '}
+                <Text style={{ fontWeight: '700', color: colors.textPrimary }}>
+                  {pageSize === 'ALL'
+                    ? sortedProducts.length
+                    : Math.min(sortedProducts.length, (currentPage - 1) * pageSize + 1)}
+                  -
+                  {pageSize === 'ALL'
+                    ? sortedProducts.length
+                    : Math.min(sortedProducts.length, currentPage * pageSize)}
+                </Text>{' '}
+                of {sortedProducts.length} items
+              </Text>
+
+              {/* Rows Per Page */}
+              <View style={styles.pageSizeWrapper}>
+                <Text style={styles.pageSizeLabel}>Rows:</Text>
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <TouchableOpacity
+                    key={String(size)}
+                    style={[styles.pageSizeChip, pageSize === size && styles.pageSizeChipActive]}
+                    onPress={() => {
+                      setPageSize(size);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <Text style={[styles.pageSizeText, pageSize === size && styles.pageSizeTextActive]}>
+                      {size}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Pagination Buttons */}
+            {pageSize !== 'ALL' && totalPages > 1 && (
+              <View style={styles.paginationControls}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+                  onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <Text style={[styles.pageBtnText, currentPage === 1 && styles.pageBtnTextDisabled]}>Previous</Text>
+                </TouchableOpacity>
+
+                <View style={styles.pageIndicator}>
+                  <Text style={styles.pageIndicatorText}>
+                    Page {currentPage} of {totalPages}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.pageBtn, currentPage === totalPages && styles.pageBtnDisabled]}
+                  onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <Text style={[styles.pageBtnText, currentPage === totalPages && styles.pageBtnTextDisabled]}>Next</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -573,7 +949,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
                 <Text style={styles.inputLabel}>Item Name *</Text>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="e.g. Shimla Apple, Paracetamol 650, Butter Chicken, A4 Sheet"
+                  placeholder="e.g. Burger, Chai, Paracetamol 650, Shimla Apple, Notebook"
                   placeholderTextColor={colors.textMuted}
                   value={formName}
                   onChangeText={setFormName}
@@ -598,7 +974,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
                   <Text style={styles.inputLabel}>Unit of Measure</Text>
                   <TextInput
                     style={styles.textInput}
-                    placeholder="e.g. kg, plate, piece, strip"
+                    placeholder="e.g. piece, kg, plate, cup"
                     placeholderTextColor={colors.textMuted}
                     value={formUnit}
                     onChangeText={setFormUnit}
@@ -624,7 +1000,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
                 <Text style={styles.inputLabel}>Category</Text>
                 <TextInput
                   style={styles.textInput}
-                  placeholder="e.g. Fruits, Pharmacy, Bakery, Snacks, Hardware, Apparel"
+                  placeholder="e.g. Snacks, Beverages, Bakery, Pharmacy, Grocery"
                   placeholderTextColor={colors.textMuted}
                   value={formCategory}
                   onChangeText={setFormCategory}
@@ -636,7 +1012,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
                 <Text style={styles.inputLabel}>Description (Optional)</Text>
                 <TextInput
                   style={[styles.textInput, { height: 60 }]}
-                  placeholder="Additional details about the product or item..."
+                  placeholder="Product specifications or ingredients..."
                   placeholderTextColor={colors.textMuted}
                   value={formDescription}
                   onChangeText={setFormDescription}
@@ -649,7 +1025,7 @@ export default function CatalogManager({ onCatalogUpdated }) {
                 <View style={styles.attrsSectionHeader}>
                   <View>
                     <Text style={styles.attrsTitle}>Custom Specification Attributes</Text>
-                    <Text style={styles.attrsSub}>Flexible key-value parameters for item specifications</Text>
+                    <Text style={styles.attrsSub}>Flexible key-value parameters for domain specifications</Text>
                   </View>
                   <TouchableOpacity style={styles.addAttrBtn} onPress={handleAddAttributeField}>
                     <Plus size={13} color={colors.primary} style={{ marginRight: 4 }} />
@@ -678,14 +1054,14 @@ export default function CatalogManager({ onCatalogUpdated }) {
                   <View key={idx} style={styles.attrInputRow}>
                     <TextInput
                       style={[styles.attrInput, { flex: 1, marginRight: 6 }]}
-                      placeholder="Attribute Key (e.g. Dosage, Size)"
+                      placeholder="Key (e.g. Dietary, Size)"
                       placeholderTextColor={colors.textMuted}
                       value={attr.key}
                       onChangeText={(val) => handleUpdateAttribute(idx, 'key', val)}
                     />
                     <TextInput
                       style={[styles.attrInput, { flex: 1.2, marginRight: 6 }]}
-                      placeholder="Value (e.g. 500mg, XL)"
+                      placeholder="Value (e.g. Vegetarian, Large)"
                       placeholderTextColor={colors.textMuted}
                       value={attr.value}
                       onChangeText={(val) => handleUpdateAttribute(idx, 'value', val)}
@@ -738,132 +1114,90 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'stretch',
   },
+  headerBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: colors.textPrimary,
     letterSpacing: -0.4,
-    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSecondary,
-    maxWidth: 600,
-    lineHeight: 16,
+    maxWidth: 680,
+    lineHeight: 18,
   },
   addItemBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addItemBtnText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  filterCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.borderColor,
-    padding: 14,
-    marginBottom: 16,
-  },
-  searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.borderColor,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: colors.textPrimary,
-    fontSize: 12,
-  },
-  clearBtn: {
-    padding: 4,
-  },
-  clearBtnText: {
-    color: colors.textMuted,
-    fontSize: 11,
-  },
-  catScroll: {
-    flexDirection: 'row',
-  },
-  catChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
-    borderWidth: 1,
-    borderColor: colors.borderColor,
-    marginRight: 6,
-  },
-  catChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  catChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  catChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
-  },
-  loadingBox: {
-    paddingVertical: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 8,
-  },
-  emptyBox: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.borderColor,
-    paddingVertical: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: colors.textMuted,
-    textAlign: 'center',
-    maxWidth: 400,
-    marginBottom: 12,
-  },
-  emptyAddBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  emptyAddBtnText: {
-    color: '#fff',
-    fontWeight: '700',
     fontSize: 13,
+    fontWeight: '700',
+  },
+  metricsStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  metricVal: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    letterSpacing: -0.3,
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  metricDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.borderColor,
   },
   businessTypeCard: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -883,14 +1217,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.05)',
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
     marginRight: 8,
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
   businessTypeChipActive: {
-    backgroundColor: 'rgba(6, 182, 212, 0.15)',
-    borderColor: colors.accentCyan,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderColor: colors.primary,
   },
   businessTypeChipText: {
     fontSize: 12,
@@ -898,16 +1232,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   businessTypeChipTextActive: {
-    color: colors.accentCyan,
+    color: colors.primary,
     fontWeight: '700',
   },
   voicePanel: {
-    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: 'rgba(99, 102, 241, 0.25)',
     padding: 16,
     marginBottom: 16,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   voicePanelHeader: {
     marginBottom: 12,
@@ -920,7 +1259,7 @@ const styles = StyleSheet.create({
   voicePanelSub: {
     fontSize: 12,
     color: colors.textMuted,
-    marginTop: 2,
+    marginTop: 3,
   },
   voiceInputRow: {
     flexDirection: 'row',
@@ -945,7 +1284,7 @@ const styles = StyleSheet.create({
   voiceTextInput: {
     flex: 1,
     height: 42,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 10,
@@ -971,10 +1310,10 @@ const styles = StyleSheet.create({
   },
   voiceChipsScroll: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   voiceChip: {
-    backgroundColor: 'rgba(15, 23, 42, 0.06)',
+    backgroundColor: '#ffffff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -988,10 +1327,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   voiceResponseBox: {
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: '#ffffff',
     borderRadius: 10,
-    padding: 10,
-    marginTop: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
+    padding: 12,
+    marginTop: 8,
   },
   voiceResponseAction: {
     fontSize: 10,
@@ -1005,153 +1346,491 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     lineHeight: 18,
   },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  productGridMobile: {
-    flexDirection: 'column',
-  },
-  productCard: {
-    backgroundColor: colors.bgCard,
-    borderRadius: 10,
+  controlsCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.borderColor,
     padding: 14,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  searchInputWrapper: {
     flex: 1,
-    minWidth: 260,
-    maxWidth: '49%',
-  },
-  cardHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    paddingHorizontal: 12,
+    height: 40,
   },
-  categoryRow: {
+  searchInput: {
+    flex: 1,
+    color: colors.textPrimary,
+    fontSize: 13,
+  },
+  clearBtn: {
+    padding: 4,
+  },
+  expandAllBtn: {
     flexDirection: 'row',
-    gap: 6,
-    marginBottom: 4,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 40,
   },
-  catPill: {
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    borderRadius: 4,
+  expandAllText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  catScroll: {
+    flexDirection: 'row',
+  },
+  catChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    marginRight: 8,
+  },
+  catChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  catChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  catChipTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  loadingBox: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 10,
+  },
+  emptyBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    paddingVertical: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  emptySub: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    maxWidth: 440,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  emptyAddBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  emptyAddBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  tableCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderColor,
+  },
+  thCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  thText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  tableRowWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderColor,
+  },
+  rowEven: {
+    backgroundColor: '#ffffff',
+  },
+  rowOdd: {
+    backgroundColor: '#FAFCFF',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  tdCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowIdxText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  prodNameText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  specCountBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
-  catPillText: {
+  specCountText: {
     fontSize: 10,
     color: colors.primary,
     fontWeight: '600',
   },
-  unitPill: {
-    backgroundColor: 'rgba(15, 23, 42, 0.05)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  unitPillText: {
-    fontSize: 10,
+  prodDescShort: {
+    fontSize: 11,
     color: colors.textMuted,
+    marginTop: 2,
   },
-  prodName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  priceContainer: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  catPill: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
     borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
+  },
+  catPillText: {
+    fontSize: 11,
+    color: '#1D4ED8',
+    fontWeight: '600',
+  },
+  unitText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  pricePill: {
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderColor: '#A7F3D0',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   priceText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#34d399',
+    color: '#047857',
   },
-  descText: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginBottom: 8,
-    lineHeight: 15,
-  },
-  attrsContainer: {
+  attrPillWrap: {
     flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
     gap: 4,
-    marginBottom: 10,
   },
-  attrTag: {
-    flexDirection: 'row',
+  inlineAttrTag: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 4,
     borderWidth: 1,
     borderColor: colors.borderColor,
+    borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  attrTagKey: {
+  inlineAttrText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  moreAttrsText: {
+    fontSize: 10,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  noAttrsText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+  actionIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chevronWrap: {
+    width: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedPanel: {
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: colors.borderColor,
+    padding: 16,
+  },
+  expandedContentRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 12,
+  },
+  expandedLeft: {
+    flex: 1.2,
+  },
+  expandedRight: {
+    flex: 1.5,
+  },
+  expandedSectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 6,
+  },
+  expandedDescText: {
+    fontSize: 12,
+    color: colors.textPrimary,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  expandedMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  expandedMetaItem: {
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  expandedMetaKey: {
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  expandedAttrsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  fullAttrCard: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 100,
+  },
+  fullAttrKey: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  fullAttrVal: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginTop: 1,
+  },
+  noSpecsText: {
+    fontSize: 12,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+  },
+  expandedFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderColor,
+  },
+  expandedEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  expandedEditBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  expandedDelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  expandedDelBtnText: {
+    color: colors.accentRose,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  tableFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: colors.borderColor,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  pageInfoText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  pageSizeWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pageSizeLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  pageSizeChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+  },
+  pageSizeChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  pageSizeText: {
     fontSize: 10,
     color: colors.textMuted,
     fontWeight: '600',
   },
-  attrTagVal: {
-    fontSize: 10,
-    color: colors.textSecondary,
+  pageSizeTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
-  cardFooter: {
+  paginationControls: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    alignItems: 'center',
     gap: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderColor,
   },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  pageBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
   },
-  editBtnText: {
+  pageBtnDisabled: {
+    opacity: 0.5,
+  },
+  pageBtnText: {
     fontSize: 11,
-    color: colors.primary,
     fontWeight: '600',
+    color: colors.textPrimary,
   },
-  delBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+  pageBtnTextDisabled: {
+    color: colors.textMuted,
   },
-  delBtnText: {
+  pageIndicator: {
+    paddingHorizontal: 6,
+  },
+  pageIndicatorText: {
     fontSize: 11,
-    color: colors.accentRose,
     fontWeight: '600',
+    color: colors.textSecondary,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
   },
   modalCard: {
     width: '100%',
-    maxWidth: 520,
-    backgroundColor: colors.bgCard,
-    borderRadius: 14,
+    maxWidth: 540,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.borderColor,
     maxHeight: '90vh',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   modalCardMobile: {
     maxWidth: '100%',
@@ -1166,11 +1845,11 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.textPrimary,
   },
   modalSub: {
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
   },
@@ -1184,21 +1863,24 @@ const styles = StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-    borderRadius: 6,
-    padding: 8,
-    marginBottom: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    padding: 10,
+    marginBottom: 14,
   },
   errorText: {
-    color: '#fb7185',
+    color: colors.accentRose,
     fontSize: 12,
+    fontWeight: '600',
   },
   inputGroup: {
     marginBottom: 12,
   },
   inputLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.textSecondary,
     marginBottom: 4,
   },
@@ -1206,11 +1888,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     color: colors.textPrimary,
-    fontSize: 12,
+    fontSize: 13,
   },
   rowTwo: {
     flexDirection: 'row',
@@ -1220,11 +1902,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   presetChip: {
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginRight: 4,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    marginRight: 6,
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
@@ -1233,7 +1915,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   presetChipText: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textMuted,
   },
   presetChipTextActive: {
@@ -1253,62 +1935,63 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   attrsTitle: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.textPrimary,
   },
   attrsSub: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textMuted,
   },
   addAttrBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 6,
   },
   addAttrBtnText: {
     fontSize: 11,
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   templatePresets: {
     marginBottom: 10,
   },
   templatePresetsLabel: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textMuted,
     fontWeight: '600',
   },
   templateBtn: {
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
-    borderWidth: 1,
-    borderColor: colors.borderColor,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 4,
-  },
-  templateBtnText: {
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  attrInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  attrInput: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
     paddingHorizontal: 8,
-    paddingVertical: 6,
-    color: colors.textPrimary,
+    paddingVertical: 4,
+    marginRight: 6,
+  },
+  templateBtnText: {
     fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  attrInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  attrInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: colors.borderColor,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    color: colors.textPrimary,
+    fontSize: 12,
   },
   removeAttrBtn: {
     padding: 6,
@@ -1317,15 +2000,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
-    padding: 14,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: colors.borderColor,
   },
   btnCancel: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.05)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
   },
   btnCancelText: {
     color: colors.textSecondary,
@@ -1333,9 +2016,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   btnSave: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
     backgroundColor: colors.primary,
   },
   btnSaveText: {

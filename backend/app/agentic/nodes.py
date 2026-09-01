@@ -86,12 +86,15 @@ def extract_intent_node(state: VoiceLedgerState) -> Dict[str, Any]:
     business_type = state.get("business_type", "")
     context = state.get("context", "terminal")
 
+    history = state.get("history", [])
+
     extraction: VoiceExtractionResult = llm_service.extract_transaction(
         raw_text,
         catalog_items=catalog_items,
         merchant_profile=merchant_profile,
         business_type=business_type,
         context=context,
+        history=history,
     )
 
     items_dict = [it.model_dump() for it in extraction.items] if extraction.items else []
@@ -99,6 +102,7 @@ def extract_intent_node(state: VoiceLedgerState) -> Dict[str, Any]:
 
     return {
         "intent": extraction.intent,
+        "product_name": extraction.product_name,
         "items": items_dict,
         "total_amount": getattr(extraction, "total_amount", None),
         "customer_name": extraction.customer_name,
@@ -176,7 +180,7 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
 
     # 2. Check Payment Status Tool
     elif intent == "check_payment_status":
-        product_filter = items[0].get("product_name") if items else None
+        product_filter = items[0].get("product_name") if items else state.get("product_name")
         res = check_payment_status_tool(
             db=db,
             merchant_id=merchant_id,
@@ -192,35 +196,54 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
     # 3. Add to Catalog Tool
     elif intent == "add_to_catalog":
         if not items:
-            explanation = state.get("explanation") or "Product add karne ke liye product ka naam aur price bolein (jaise: 'Menu mein burger add karo 100 rupaye')."
+            explanation = state.get("explanation") or "Product add karne ke liye product ka naam aur price bolein (jaise: 'Burger 100 rupaye' ya '2 coffee 50 rs')."
             return {
                 "agent_reply": explanation,
-                "action_taken": "CATALOG_ADD_FAILED",
+                "action_taken": "CATALOG_ADD_PRICE_REQUIRED",
                 "tool_result": {},
             }
         
-        it = items[0]
-        prod_name = it.get("product_name", "").strip()
-        prod_price = float(it.get("unit_price") or 0.0)
-        cat = it.get("category")
-        unit = it.get("unit")
-        extracted_attrs = state.get("attributes", {})
+        added_items = []
+        for it in items:
+            prod_name = it.get("product_name", "").strip()
+            if not prod_name:
+                continue
+            prod_price = float(it.get("unit_price") or 0.0)
+            cat = it.get("category")
+            unit = it.get("unit")
+            extracted_attrs = state.get("attributes", {})
 
-        res = add_to_catalog_tool(
-            db=db,
-            merchant_id=merchant_id,
-            product_name=prod_name,
-            unit_price=prod_price,
-            category=cat,
-            unit=unit,
-            extracted_attrs=extracted_attrs,
-            business_type=business_type,
-        )
-        return {
-            "agent_reply": res["agent_reply"],
-            "action_taken": res["action_taken"],
-            "tool_result": res,
-        }
+            res = add_to_catalog_tool(
+                db=db,
+                merchant_id=merchant_id,
+                product_name=prod_name,
+                unit_price=prod_price,
+                category=cat,
+                unit=unit,
+                extracted_attrs=extracted_attrs,
+                business_type=business_type,
+            )
+            added_items.append(res)
+
+        if len(added_items) == 1:
+            return {
+                "agent_reply": added_items[0]["agent_reply"],
+                "action_taken": added_items[0]["action_taken"],
+                "tool_result": added_items[0],
+            }
+        elif len(added_items) > 1:
+            names = ", ".join(f"{it.get('name', 'item').title()} (₹{it.get('price', 0):.0f})" for it in added_items)
+            return {
+                "agent_reply": f"Catalog me {len(added_items)} items add ho gaye: {names}.",
+                "action_taken": "CATALOG_ITEMS_ADDED",
+                "tool_result": {"items": added_items},
+            }
+        else:
+            return {
+                "agent_reply": "Product add karne ke liye product ka naam aur price bolein.",
+                "action_taken": "CATALOG_ADD_FAILED",
+                "tool_result": {},
+            }
 
     # 4. Financial Analytics Tool (GMV, Outstanding Debt)
     elif intent in ["query_pending", "query_daily"]:
@@ -237,7 +260,7 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
 
     # 5. List / Search Catalog Tool
     elif intent in ["list_catalog", "search_catalog"]:
-        search_query = items[0].get("product_name") if items else None
+        search_query = state.get("product_name") or (items[0].get("product_name") if items else None)
         res = list_or_search_catalog_tool(
             db=db,
             merchant_id=merchant_id,

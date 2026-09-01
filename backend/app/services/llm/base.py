@@ -13,6 +13,7 @@ class BaseLLMProvider:
         merchant_profile: Optional[dict] = None,
         business_type: Optional[str] = None,
         context: str = "terminal",
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> VoiceExtractionResult:
         raise NotImplementedError
 
