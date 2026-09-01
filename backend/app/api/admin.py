@@ -167,8 +167,8 @@ def get_merchant_detail(merchant_id: int, db: Session = Depends(get_db)):
         total_collected=round(collected, 2),
         total_outstanding=round(outstanding, 2),
         products_count=len(products),
-        recent_sales=[SaleResponse.from_orm(s) for s in sales[:10]],
-        catalog_products=[ProductResponse.from_orm(p) for p in products],
+        recent_sales=[SaleResponse.model_validate(s) for s in sales[:10]],
+        catalog_products=[ProductResponse.model_validate(p) for p in products],
     )
 
 

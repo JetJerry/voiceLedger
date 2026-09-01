@@ -46,7 +46,7 @@ def get_dashboard_summary(
     # Recovery queue
     recovery_items = recovery_service.get_recovery_queue(db)[:5]
     
-    recent_sales = [SaleResponse.from_orm(s) for s in all_sales[:15]]
+    recent_sales = [SaleResponse.model_validate(s) for s in all_sales[:50]]
 
     return DashboardSummary(
         today_sales=round(today_sales_sum, 2),

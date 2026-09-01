@@ -87,6 +87,7 @@ def run_voiceledger_agent_workflow(
         "context": request.context or "terminal",
         "voice_lang": request.voice_lang or "hi",
         "speak_response": request.speak_response if request.speak_response is not None else True,
+        "history": request.history or [],
         
         "catalog_items": [],
         "product_map": {},
@@ -94,6 +95,7 @@ def run_voiceledger_agent_workflow(
         "merchant_profile": None,
         
         "intent": "general_qa",
+        "product_name": None,
         "items": [],
         "total_amount": None,
         "customer_name": None,

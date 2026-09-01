@@ -36,11 +36,14 @@ class GeminiLLMProvider(BaseLLMProvider):
         merchant_profile: Optional[dict] = None,
         business_type: Optional[str] = None,
         context: str = "terminal",
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> VoiceExtractionResult:
         if not self.client:
             raise RuntimeError("Gemini client not configured (GEMINI_API_KEY missing)")
 
-        prompt = build_extraction_prompt(text, catalog_items, merchant_profile, business_type, context)
+        prompt = build_extraction_prompt(
+            text, catalog_items, merchant_profile, business_type, context, history=history
+        )
         models_to_try = [
             settings.GEMINI_MODEL,
             "gemini-3.6-flash",

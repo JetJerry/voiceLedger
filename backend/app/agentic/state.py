@@ -14,6 +14,7 @@ class VoiceLedgerState(TypedDict):
     context: str                  # "terminal" | "catalog" | "sales" | "admin"
     voice_lang: str               # "hi" | "en"
     speak_response: bool
+    history: List[Dict[str, str]]
     
     # ── 2. Enriched Context ──
     catalog_items: List[str]
@@ -23,6 +24,7 @@ class VoiceLedgerState(TypedDict):
     
     # ── 3. Extraction & Classification ──
     intent: str
+    product_name: Optional[str]
     items: List[Dict[str, Any]]
     total_amount: Optional[float]
     customer_name: Optional[str]

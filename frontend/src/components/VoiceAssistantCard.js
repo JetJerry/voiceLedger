@@ -28,6 +28,7 @@ export default function VoiceAssistantCard({ onActionComplete }) {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentResponse, setAgentResponse] = useState(null);
+  const [conversationHistory, setConversationHistory] = useState([]);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -88,11 +89,17 @@ export default function VoiceAssistantCard({ onActionComplete }) {
       status: 'loading',
     });
 
+    const currentHistory = [...conversationHistory, { role: 'user', content: query }];
+
     try {
-      const data = await apiService.processVoiceCommand(query);
+      const data = await apiService.processVoiceCommand(query, 'terminal', currentHistory);
       
+      const reply = data.agent_reply || 'Completed.';
+      const updatedHistory = [...currentHistory, { role: 'assistant', content: reply }].slice(-10);
+      setConversationHistory(updatedHistory);
+
       setAgentResponse({
-        reply: data.agent_reply || 'Completed.',
+        reply,
         action: data.action_taken || 'Completed',
         audioBase64: data.audio_base64,
         status: 'success',

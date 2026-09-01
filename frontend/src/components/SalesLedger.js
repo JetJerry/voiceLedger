@@ -13,7 +13,6 @@ import {
 import {
   RefreshCw,
   ShoppingCart,
-  Download,
   Calendar,
   DollarSign,
   Clock,
@@ -88,6 +87,12 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
     top_products: [],
   };
 
+  // Status counts
+  const totalCount = (sales || []).length;
+  const paidCount = (sales || []).filter((s) => s.status === 'PAID').length;
+  const pendingCount = (sales || []).filter((s) => s.status === 'PENDING').length;
+  const partialCount = (sales || []).filter((s) => s.status === 'PARTIAL').length;
+
   // Filter transactions
   const filteredSales = (sales || []).filter((s) => {
     if (statusFilter !== 'ALL' && s.status !== statusFilter) {
@@ -98,7 +103,8 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
       const matchCustomer = (s.customer_name || '').toLowerCase().includes(q);
       const matchId = (s.id || '').toLowerCase().includes(q);
       const matchItem = (s.items || []).some((it) => (it.product_name || '').toLowerCase().includes(q));
-      return matchCustomer || matchId || matchItem;
+      const matchTranscript = (s.raw_voice_transcript || '').toLowerCase().includes(q);
+      return matchCustomer || matchId || matchItem || matchTranscript;
     }
     return true;
   });
@@ -110,7 +116,7 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>Sales & Payment Settlement Ledger</Text>
           <Text style={styles.subtitle}>
-            Comprehensive transaction ledger with period analytics and structured spreadsheet exports.
+            Comprehensive transaction ledger with period analytics, live settlement tracking, and instant Excel exports.
           </Text>
         </View>
 
@@ -260,19 +266,43 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
             </View>
           </View>
 
-          {/* Status Filter Chips */}
+          {/* Status Filter Chips with Dynamic Counts */}
           <View style={styles.statusChipsRow}>
-            {['ALL', 'PAID', 'PENDING', 'PARTIAL'].map((st) => (
-              <TouchableOpacity
-                key={st}
-                style={[styles.statusChip, statusFilter === st && styles.statusChipActive]}
-                onPress={() => setStatusFilter(st)}
-              >
-                <Text style={[styles.statusChipText, statusFilter === st && styles.statusChipTextActive]}>
-                  {st}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            <TouchableOpacity
+              style={[styles.statusChip, statusFilter === 'ALL' && styles.statusChipActive]}
+              onPress={() => setStatusFilter('ALL')}
+            >
+              <Text style={[styles.statusChipText, statusFilter === 'ALL' && styles.statusChipTextActive]}>
+                ALL ({totalCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusChip, statusFilter === 'PAID' && styles.statusChipPaidActive]}
+              onPress={() => setStatusFilter('PAID')}
+            >
+              <Text style={[styles.statusChipText, statusFilter === 'PAID' && styles.statusChipPaidTextActive]}>
+                PAID ({paidCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusChip, statusFilter === 'PENDING' && styles.statusChipPendingActive]}
+              onPress={() => setStatusFilter('PENDING')}
+            >
+              <Text style={[styles.statusChipText, statusFilter === 'PENDING' && styles.statusChipPendingTextActive]}>
+                PENDING ({pendingCount})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statusChip, statusFilter === 'PARTIAL' && styles.statusChipPartialActive]}
+              onPress={() => setStatusFilter('PARTIAL')}
+            >
+              <Text style={[styles.statusChipText, statusFilter === 'PARTIAL' && styles.statusChipPartialTextActive]}>
+                PARTIAL ({partialCount})
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -288,7 +318,7 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
           />
           {searchQuery ? (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
-              <Text style={{ color: colors.textMuted, fontSize: 12 }}>Clear</Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '600' }}>Clear</Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -297,10 +327,10 @@ export default function SalesLedger({ sales = [], onRefresh, onSimulatePayment, 
         <View style={styles.listContainer}>
           {filteredSales.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <PackageOpen size={32} color={colors.textMuted} style={{ marginBottom: 8 }} />
+              <PackageOpen size={36} color={colors.textMuted} style={{ marginBottom: 10 }} />
               <Text style={styles.emptyTitle}>No transaction records found</Text>
               <Text style={styles.emptySubtitle}>
-                No orders match your filter criteria. Record a sale or adjust filters to view transactions.
+                No orders match your filter criteria ({statusFilter}). Record a voice sale or adjust filters to view transactions.
               </Text>
             </View>
           ) : (
@@ -368,10 +398,10 @@ const styles = StyleSheet.create({
   refreshBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: colors.borderColor,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
@@ -385,7 +415,7 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '45deg' }],
   },
   periodTabsCard: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -394,7 +424,7 @@ const styles = StyleSheet.create({
   },
   periodTabsRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(15, 23, 42, 0.03)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 8,
     padding: 3,
     borderWidth: 1,
@@ -431,7 +461,7 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.02)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -474,7 +504,7 @@ const styles = StyleSheet.create({
   topProductChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: colors.borderColor,
     borderRadius: 6,
@@ -505,7 +535,7 @@ const styles = StyleSheet.create({
     color: colors.accentEmerald,
   },
   sectionCard: {
-    backgroundColor: colors.bgCard,
+    backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: colors.borderColor,
@@ -532,7 +562,7 @@ const styles = StyleSheet.create({
   countPill: {
     backgroundColor: 'rgba(15, 23, 42, 0.06)',
     borderRadius: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 2,
   },
   countPillText: {
@@ -542,13 +572,14 @@ const styles = StyleSheet.create({
   },
   statusChipsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   statusChip: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: colors.borderColor,
   },
@@ -556,10 +587,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
+  statusChipPaidActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  statusChipPaidTextActive: {
+    color: '#047857',
+    fontWeight: '800',
+  },
+  statusChipPendingActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
+  },
+  statusChipPendingTextActive: {
+    color: '#B91C1C',
+    fontWeight: '800',
+  },
+  statusChipPartialActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#F59E0B',
+  },
+  statusChipPartialTextActive: {
+    color: '#B45309',
+    fontWeight: '800',
+  },
   statusChipText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   statusChipTextActive: {
     color: '#ffffff',
@@ -587,7 +642,12 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 36,
+    paddingVertical: 40,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.borderColor,
   },
   emptyTitle: {
     fontSize: 14,
@@ -600,5 +660,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     maxWidth: 400,
+    lineHeight: 16,
   },
 });

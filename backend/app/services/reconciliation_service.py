@@ -120,6 +120,10 @@ class ReconciliationService:
         except Exception as e:
             pass
 
+        # 7. Persist deterministic reconciliation state to database
+        db.commit()
+        db.refresh(target_sale)
+
         return {
             "result": "MATCHED",
             "sale_id": target_sale.id,

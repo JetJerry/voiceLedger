@@ -46,6 +46,7 @@ class LLMService:
         merchant_profile: Optional[dict] = None,
         business_type: Optional[str] = None,
         context: str = "terminal",
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> VoiceExtractionResult:
         errors = []
         for provider in self._get_providers_in_priority():
@@ -53,7 +54,7 @@ class LLMService:
                 continue
             try:
                 result = provider.extract_transaction(
-                    text, catalog_items, merchant_profile, business_type, context
+                    text, catalog_items, merchant_profile, business_type, context, history=history
                 )
                 logger.info("[AI Agent] Extraction succeeded via provider: %s", provider.name)
                 return result
@@ -87,6 +88,7 @@ class LLMService:
         merchant_profile: Optional[dict] = None,
         business_type: Optional[str] = None,
         context: str = "terminal",
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> VoiceExtractionResult:
         text_clean = text.strip()
         if not text_clean:
@@ -97,7 +99,7 @@ class LLMService:
             )
 
         result = self._extract_with_fallback(
-            text_clean, catalog_items, merchant_profile, business_type, context
+            text_clean, catalog_items, merchant_profile, business_type, context, history=history
         )
         return self.validate_extraction(result, catalog_items or [])
 

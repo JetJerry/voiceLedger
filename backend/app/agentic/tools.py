@@ -317,29 +317,42 @@ def list_or_search_catalog_tool(
     if not products:
         return {
             "action_taken": "CATALOG_LISTED" if intent == "list_catalog" else "CATALOG_SEARCHED",
-            "agent_reply": "Aapke catalog me abhi koi product nahi hai. Pehle product add karein.",
+            "agent_reply": "Aapke catalog me abhi koi product nahi hai. Pehle 'Add Product' se item add karein ya bolein: 'Menu mein burger add karo 100 rupaye'.",
             "catalog_count": 0,
         }
 
-    if intent == "list_catalog":
-        items_preview = ", ".join(f"{p.name.title()} (Rs. {p.price:.0f})" for p in products[:10])
-        agent_reply = f"Aapke catalog me kul {len(products)} items hain: {items_preview}."
+    if intent == "list_catalog" or not search_query:
+        categories = list(dict.fromkeys(p.category or "General" for p in products))
+        items_preview = ", ".join(f"{p.name.title()} (Rs. {p.price:.0f})" for p in products[:8])
+        more_text = f" aur {len(products) - 8} anya items" if len(products) > 8 else ""
+        agent_reply = f"Aapke catalog me kul {len(products)} items hain ({', '.join(categories[:4])}): {items_preview}{more_text}."
         return {
             "action_taken": "CATALOG_LISTED",
             "agent_reply": agent_reply,
             "catalog_count": len(products),
+            "categories_count": len(categories),
         }
     else:
         q_name = (search_query or "").lower().strip()
-        matches = [p for p in products if q_name and q_name in p.name.lower()]
+        matches = [p for p in products if q_name and (q_name in p.name.lower() or p.name.lower() in q_name)]
         if matches:
             p = matches[0]
             agent_reply = f"{p.name.title()} ka price Rs. {p.price:.2f} per {p.unit or 'piece'} hai (Category: {p.category or 'General'})."
+            return {
+                "action_taken": "CATALOG_SEARCHED",
+                "agent_reply": agent_reply,
+                "product_id": p.id,
+                "name": p.name,
+                "price": p.price,
+                "unit": p.unit,
+                "category": p.category,
+                "catalog_count": len(products),
+            }
         else:
-            agent_reply = f"Catalog me '{search_query or 'item'}' nahi mila."
-
-        return {
-            "action_taken": "CATALOG_SEARCHED",
-            "agent_reply": agent_reply,
-            "catalog_count": len(products),
-        }
+            items_preview = ", ".join(f"{p.name.title()}" for p in products[:5])
+            agent_reply = f"Catalog me '{search_query}' nahi mila. Aapke catalog me items hain: {items_preview}."
+            return {
+                "action_taken": "CATALOG_SEARCHED",
+                "agent_reply": agent_reply,
+                "catalog_count": len(products),
+            }
