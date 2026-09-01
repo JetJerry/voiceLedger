@@ -1,8 +1,18 @@
-import pytest
-from backend.app.models import Merchant, Product, Sale
-from backend.app.schemas.voice import VoiceProcessRequest
-from backend.app.agentic.graph import build_voiceledger_graph, run_voiceledger_agent_workflow
-from backend.app.agentic.state import VoiceLedgerState
+"""
+Unit tests for LangGraph state machine workflow and guardrails.
+"""
+
+from unittest.mock import patch
+from backend.app.models import Merchant, Product
+from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult, VoiceItemExtracted
+from backend.app.agentic.graph import run_voiceledger_agent_workflow
+from backend.app.agentic.tools import (
+    record_sale_tool,
+    check_payment_status_tool,
+    add_to_catalog_tool,
+    query_store_finances_tool,
+    list_or_search_catalog_tool,
+)
 
 
 def test_langgraph_workflow_empty_catalog(db_session):
@@ -18,12 +28,20 @@ def test_langgraph_workflow_empty_catalog(db_session):
     db_session.commit()
     db_session.refresh(m)
 
-    # Empty catalog: user asks to sell chai
-    req = VoiceProcessRequest(text="2 chai 40 rupaye", voice_lang="hi", speak_response=True)
-    res = run_voiceledger_agent_workflow(db_session, req, merchant_id=m.id)
+    mock_extraction = VoiceExtractionResult(
+        intent="record_sale",
+        items=[VoiceItemExtracted(product_name="chai", quantity=2, unit_price=20.0)],
+        raw_text="2 chai 40 rupaye",
+        payment_status="pending",
+    )
 
-    assert res.action_taken in ["CATALOG_EMPTY", "SALE_VALIDATION_FAILED", "QUERY_ANSWERED"]
-    assert "catalog" in res.agent_reply.lower() or "product" in res.agent_reply.lower()
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=mock_extraction):
+        req = VoiceProcessRequest(text="2 chai 40 rupaye", voice_lang="hi", speak_response=False)
+        res = run_voiceledger_agent_workflow(db_session, req, merchant_id=m.id)
+
+        assert res.action_taken == "SALE_CREATED"
+        assert res.sale is not None
+        assert res.sale["total_amount"] == 40.0
 
 
 def test_langgraph_workflow_add_product_to_catalog(db_session):
@@ -39,23 +57,31 @@ def test_langgraph_workflow_add_product_to_catalog(db_session):
     db_session.commit()
     db_session.refresh(m)
 
-    req = VoiceProcessRequest(text="Menu mein paracetamol add karo 50 rupaye", voice_lang="hi")
-    res = run_voiceledger_agent_workflow(db_session, req, merchant_id=m.id)
+    mock_extraction = VoiceExtractionResult(
+        intent="add_to_catalog",
+        items=[VoiceItemExtracted(product_name="paracetamol", quantity=1, unit_price=50.0, category="Medicines", unit="strip")],
+        raw_text="Menu mein paracetamol add karo 50 rupaye",
+        payment_status="pending",
+    )
 
-    assert res.action_taken in ["CATALOG_ITEM_ADDED", "CATALOG_ADDED", "CATALOG_UPDATED"]
-    assert "paracetamol" in res.agent_reply.lower() or "50" in res.agent_reply
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=mock_extraction):
+        req = VoiceProcessRequest(text="Menu mein paracetamol add karo 50 rupaye", voice_lang="hi", speak_response=False)
+        res = run_voiceledger_agent_workflow(db_session, req, merchant_id=m.id)
 
-    # Verify DB insertion
-    p = db_session.query(Product).filter(Product.merchant_id == m.id, Product.name.ilike("%paracetamol%")).first()
-    assert p is not None
-    assert p.price == 50.0
+        assert res.action_taken in ["CATALOG_ITEM_ADDED", "CATALOG_ADDED", "CATALOG_UPDATED"]
+        assert "paracetamol" in res.agent_reply.lower() or "50" in res.agent_reply
+
+        # Verify DB insertion
+        p = db_session.query(Product).filter(Product.merchant_id == m.id, Product.name.ilike("%paracetamol%")).first()
+        assert p is not None
+        assert p.price == 50.0
 
 
-def test_langgraph_workflow_record_sale_and_payment_status(db_session):
-    """Test LangGraph recording a sale and then checking payment status."""
+def test_langgraph_agent_tools_directly(db_session):
+    """Directly test the discrete Agent Tools."""
     m = Merchant(
-        name="Snack Bar",
-        username="snack_bar",
+        name="Tool Test Mart",
+        username="tool_test",
         business_type="Cafe & Fast Food",
         is_active=True,
         is_current_active=True,
@@ -64,21 +90,45 @@ def test_langgraph_workflow_record_sale_and_payment_status(db_session):
     db_session.commit()
     db_session.refresh(m)
 
-    # Add product
-    p = Product(merchant_id=m.id, name="samosa", price=25.0, category="Snacks", is_active=True)
-    db_session.add(p)
-    db_session.commit()
+    # 1. Add item tool
+    add_res = add_to_catalog_tool(
+        db=db_session,
+        merchant_id=m.id,
+        product_name="samosa",
+        unit_price=25.0,
+        category="Snacks",
+        unit="piece",
+        business_type=m.business_type,
+    )
+    assert add_res["action_taken"] == "CATALOG_ITEM_ADDED"
+    assert add_res["price"] == 25.0
 
-    # 1. Record Sale via LangGraph
-    req_sale = VoiceProcessRequest(text="2 samosa 50 rs", voice_lang="hi")
-    res_sale = run_voiceledger_agent_workflow(db_session, req_sale, merchant_id=m.id)
+    # 2. Record sale tool
+    sale_res = record_sale_tool(
+        db=db_session,
+        merchant_id=m.id,
+        items=[{"product_name": "samosa", "quantity": 2, "unit_price": 25.0}],
+        product_map={"samosa": {"price": 25.0}},
+        customer_name="Ramesh",
+        is_credit=False,
+    )
+    assert sale_res["action_taken"] == "SALE_CREATED"
+    assert sale_res["total_amount"] == 50.0
 
-    assert res_sale.action_taken in ["SALE_CREATED", "SALE_RECORDED"]
-    assert "samosa" in res_sale.agent_reply.lower() or "50" in res_sale.agent_reply
+    # 3. Check status tool
+    status_res = check_payment_status_tool(
+        db=db_session,
+        merchant_id=m.id,
+        product_filter="samosa",
+    )
+    assert status_res["action_taken"] == "PAYMENT_STATUS_CHECKED"
+    assert status_res["status"] == "PENDING"
 
-    # 2. Check Payment Status via LangGraph
-    req_status = VoiceProcessRequest(text="Payment aaya kya?", voice_lang="hi")
-    res_status = run_voiceledger_agent_workflow(db_session, req_status, merchant_id=m.id)
-
-    assert res_status.action_taken in ["PAYMENT_STATUS_CHECKED", "QUERY_ANSWERED"]
-    assert "samosa" in res_status.agent_reply.lower() or "pending" in res_status.agent_reply.lower() or "50" in res_status.agent_reply
+    # 4. Analytics tool
+    fin_res = query_store_finances_tool(
+        db=db_session,
+        merchant_id=m.id,
+        intent="query_daily",
+    )
+    assert fin_res["action_taken"] == "DAILY_QUERIED"
+    assert fin_res["today_gmv"] == 50.0

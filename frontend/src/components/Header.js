@@ -27,6 +27,7 @@ export default function Header({
   currentView = 'terminal',
   onSelectView,
   currentUser,
+  activeStoreName,
   onLogout,
 }) {
   const { width } = useWindowDimensions();
@@ -59,11 +60,11 @@ export default function Header({
                   <ShieldCheck size={12} color="#a78bfa" style={{ marginRight: 4 }} />
                   <Text style={styles.adminBadgeText}>Platform Admin</Text>
                 </View>
-              ) : currentUser?.name ? (
+              ) : (activeStoreName || currentUser?.name) ? (
                 <View style={styles.storeBadge}>
                   <Store size={12} color={colors.primary} style={{ marginRight: 4 }} />
                   <Text style={styles.storeBadgeText} numberOfLines={1}>
-                    {currentUser.name}
+                    {activeStoreName || currentUser?.name}
                   </Text>
                 </View>
               ) : null}

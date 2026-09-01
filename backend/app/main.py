@@ -28,6 +28,9 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
+from backend.app.agentic.llm_factory import setup_langsmith_tracing
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize DB & Seed Data on Startup
@@ -36,6 +39,15 @@ async def lifespan(app: FastAPI):
         logger.info("Database initialization completed")
     except Exception as e:
         logger.exception("Startup DB init error: %s", e)
+
+    # Initialize LangSmith Observability
+    setup_langsmith_tracing()
+    logger.info(
+        "[AI Agent] Started with Primary LLM: %s, LangSmith Tracing: %s (project: %s)",
+        settings.LLM_PROVIDER,
+        "ENABLED" if settings.LANGCHAIN_API_KEY else "DISABLED (set LANGCHAIN_API_KEY in .env)",
+        settings.LANGCHAIN_PROJECT,
+    )
     yield
 
 
@@ -95,8 +107,12 @@ def health_check():
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
-        "razorpay_configured": bool(settings.RAZORPAY_KEY_ID),
+        "llm_provider": settings.LLM_PROVIDER,
+        "groq_configured": bool(settings.GROQ_API_KEY),
         "gemini_configured": bool(settings.GEMINI_API_KEY),
+        "langsmith_tracing": bool(settings.LANGCHAIN_API_KEY),
+        "langsmith_project": settings.LANGCHAIN_PROJECT,
+        "razorpay_configured": bool(settings.RAZORPAY_KEY_ID),
         "huggingface_models": {
             "stt_model": f"openai/whisper-{settings.WHISPER_MODEL_SIZE}",
             "stt_device": settings.WHISPER_DEVICE,

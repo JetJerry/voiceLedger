@@ -39,5 +39,7 @@ class WebhookEvent(Base):
     event_type = Column(String(100), nullable=False, index=True)
     payload = Column(Text, nullable=False)
     processed = Column(Boolean, default=False, nullable=False)
+    status = Column(String(50), default="RECEIVED", nullable=True)  # PROCESSED, SIGNATURE_FAILED, RECONCILIATION_FAILED, DUPLICATE
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     processed_at = Column(DateTime, nullable=True)

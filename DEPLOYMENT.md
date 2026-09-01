@@ -39,12 +39,17 @@ Create a secret named `voice_ledger` in Modal with your environment variables:
 ```bash
 modal secret create voice_ledger \
   DATABASE_URL="sqlite:////data/voiceledger.db" \
-  GEMINI_API_KEY="your_gemini_api_key_here" \
+  GROQ_API_KEY="gsk_your_groq_key" \
+  GEMINI_API_KEY="your_gemini_api_key" \
+  GEMINI_MODEL="gemini-3.6-flash" \
+  LANGCHAIN_TRACING_V2="true" \
+  LANGCHAIN_API_KEY="lsv2_your_langsmith_key" \
+  LANGCHAIN_PROJECT="Voice_ledger" \
   RAZORPAY_KEY_ID="rzp_test_xxxxxx" \
   RAZORPAY_KEY_SECRET="your_razorpay_secret" \
   RAZORPAY_WEBHOOK_SECRET="your_webhook_secret"
 ```
-*(Or create it in the Modal Web Dashboard under **Secrets > Create Secret** with name `voice_ledger`)*.
+*(Or update it in the Modal Web Dashboard under **Secrets > voice_ledger**)*.
 
 ### Step 3: Deploy the Backend
 From the project root directory (`d:\razorpay`), run:
@@ -52,13 +57,15 @@ From the project root directory (`d:\razorpay`), run:
 modal deploy modal_app.py
 ```
 
-### Step 4: Copy your Live Modal Backend URL
-Modal will output your live URL, for example:
+### Step 4: Your Live Modal Backend URL
+Your deployed backend URL:
 ```
-✓ Created web endpoint: https://<your-workspace>--voiceledger-backend-fastapi-app.modal.run
+https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run
 ```
-Test health check in browser:
-`https://<your-workspace>--voiceledger-backend-fastapi-app.modal.run/api/health`
+Live health check endpoint:
+`https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run/api/health`
+Interactive API Docs (Swagger):
+`https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run/docs`
 
 ---
 
@@ -75,7 +82,7 @@ Test health check in browser:
 4. Add **Environment Variable** in Vercel:
    | Key | Value |
    | :--- | :--- |
-   | `EXPO_PUBLIC_API_URL` | `https://<your-workspace>--voiceledger-backend-fastapi-app.modal.run` |
+   | `EXPO_PUBLIC_API_URL` | `https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run` |
 5. Click **"Deploy"**.
 
 ---
@@ -89,7 +96,7 @@ npm install -g vercel
 cd frontend
 
 # 3. Deploy
-vercel --prod --env EXPO_PUBLIC_API_URL="https://<your-workspace>--voiceledger-backend-fastapi-app.modal.run"
+vercel --prod --env EXPO_PUBLIC_API_URL="https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run"
 ```
 
 ---
@@ -97,13 +104,13 @@ vercel --prod --env EXPO_PUBLIC_API_URL="https://<your-workspace>--voiceledger-b
 ## 3️⃣ Configure Razorpay Webhooks
 
 To receive live payment updates from Razorpay customers:
-1. Log in to [Razorpay Dashboard](https://dashboard.razorpay.com/app/webhooks).
+1. Log in to [Razorpay Dashboard > Webhooks](https://dashboard.razorpay.com/app/webhooks).
 2. Click **"Add New Webhook"**.
 3. **Webhook URL**:
    ```
-   https://<your-workspace>--voiceledger-backend-fastapi-app.modal.run/api/webhooks/razorpay
+   https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run/api/webhooks/razorpay
    ```
-4. **Secret**: Enter the same value as `RAZORPAY_WEBHOOK_SECRET`.
+4. **Secret**: Enter the value of your `RAZORPAY_WEBHOOK_SECRET` (from `.env` or Modal Secret `voice_ledger`).
 5. **Active Events**:
    - `payment_link.paid`
    - `payment.captured`

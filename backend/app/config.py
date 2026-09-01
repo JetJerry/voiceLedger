@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     OPENAI_API_KEY: str = ""
     LLM_PROVIDER: str = "groq"  # groq, gemini, openai, or mock
     LLM_MODEL: str = "llama-3.3-70b-versatile"  # legacy alias; Groq uses GROQ_MODEL

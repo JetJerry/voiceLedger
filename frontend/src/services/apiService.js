@@ -79,6 +79,31 @@ export const apiService = {
     return await res.json();
   },
 
+  // ── Webhooks & Reconciliation Logs ─────────────────────────────────
+  async getWebhookLogs(limit = 50, status = null) {
+    const base = getApiBase();
+    let url = `${base}/webhooks/logs?limit=${limit}`;
+    if (status) {
+      url += `&status=${encodeURIComponent(status)}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Failed to fetch webhook logs: ${res.status}`);
+    }
+    return await res.json();
+  },
+
+  async retryWebhookEvent(eventId) {
+    const base = getApiBase();
+    const res = await fetch(`${base}/webhooks/logs/${eventId}/retry`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      throw new Error(`Retry failed: ${res.status}`);
+    }
+    return await res.json();
+  },
+
   // ── Open-Ended Catalog & Menu APIs ────────────────────────────────
   async getCatalogProducts(category = null, search = '') {
     const base = getApiBase();

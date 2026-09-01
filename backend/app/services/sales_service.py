@@ -128,7 +128,7 @@ class SalesService:
         sale = Sale(
             id=sale_id,
             merchant_id=merchant.id,
-            customer_name=sale_in.customer_name,
+            customer_name=sale_in.customer_name or "Walk-in Customer",
             status="PENDING",
             raw_voice_transcript=sale_in.raw_voice_transcript
         )

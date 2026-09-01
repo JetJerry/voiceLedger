@@ -48,6 +48,15 @@ def _migrate_tables(bind_engine):
                 if "updated_at" not in existing_merch_cols:
                     conn.execute(text("ALTER TABLE merchants ADD COLUMN updated_at DATETIME;"))
 
+            # 3. Check webhook_events table
+            result_wh = conn.execute(text("PRAGMA table_info(webhook_events);")).fetchall()
+            existing_wh_cols = {row[1] for row in result_wh}
+            if existing_wh_cols:
+                if "status" not in existing_wh_cols:
+                    conn.execute(text("ALTER TABLE webhook_events ADD COLUMN status VARCHAR(50) DEFAULT 'RECEIVED';"))
+                if "error_message" not in existing_wh_cols:
+                    conn.execute(text("ALTER TABLE webhook_events ADD COLUMN error_message TEXT;"))
+
             conn.commit()
         except Exception as e:
             # Non-sqlite or other DB engine

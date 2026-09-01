@@ -3,7 +3,7 @@ from backend.app.models import Merchant, Product, Sale, SaleItem
 from backend.app.services.reconciliation_service import reconciliation_service
 from backend.app.services.payment_announcement_service import payment_announcement_service
 from backend.app.services.sales_service import sales_service
-from backend.app.schemas.voice import VoiceProcessRequest
+from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult
 from backend.app.agents.merchant_agent import merchant_agent
 
 
@@ -78,8 +78,15 @@ def test_merchant_agent_confirms_payment_via_voice(client, db_session):
     )
 
     # 3. Vendor asks voice assistant
-    voice_req = VoiceProcessRequest(text="Payment aaya kya?", voice_lang="hi")
-    agent_res = merchant_agent.process_merchant_command(db_session, voice_req)
+    mock_status_extraction = VoiceExtractionResult(
+        intent="check_payment_status",
+        raw_text="Payment aaya kya?",
+        payment_status="pending",
+    )
+    from unittest.mock import patch
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=mock_status_extraction):
+        voice_req = VoiceProcessRequest(text="Payment aaya kya?", voice_lang="hi", speak_response=False)
+        agent_res = merchant_agent.process_merchant_command(db_session, voice_req)
 
     assert agent_res.action_taken in ["PAYMENT_STATUS_CHECKED", "QUERY_ANSWERED"]
     assert "PAID" in agent_res.agent_reply or "receive" in agent_res.agent_reply or "350" in agent_res.agent_reply

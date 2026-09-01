@@ -30,6 +30,7 @@ export default function App() {
 
   // Authentication State
   const [currentUser, setCurrentUser] = useState(null); // { id, name, username, role, business_type }
+  const [activeStoreName, setActiveStoreName] = useState(null);
   const [currentView, setCurrentView] = useState('terminal'); // 'terminal' | 'sales' | 'catalog' | 'admin'
   const [summaryData, setSummaryData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -68,6 +69,48 @@ export default function App() {
     }
   }, [currentUser]);
 
+  const syncActiveStoreName = useCallback(async () => {
+    if (!currentUser || currentUser.role === 'admin') {
+      setActiveStoreName(null);
+      return;
+    }
+
+    const fallbackName = currentUser.name || null;
+    try {
+      const merchant = await apiService.getMerchant();
+      const nextName = merchant?.name || fallbackName;
+      setActiveStoreName(nextName);
+
+      if (nextName && currentUser.name !== nextName) {
+        setCurrentUser((prev) => {
+          if (!prev || prev.name === nextName) return prev;
+          const updatedUser = { ...prev, name: nextName };
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const raw = window.localStorage.getItem('voiceledger_session');
+            if (raw) {
+              try {
+                const session = JSON.parse(raw);
+                session.user = { ...session.user, ...updatedUser };
+                window.localStorage.setItem('voiceledger_session', JSON.stringify(session));
+              } catch (e) {
+                console.warn('Session sync notice:', e.message);
+              }
+            }
+          }
+          return updatedUser;
+        });
+      }
+    } catch (e) {
+      console.warn('Active store sync notice:', e.message);
+      setActiveStoreName(fallbackName);
+    }
+  }, [currentUser]);
+
+  const refreshAppContext = useCallback(async () => {
+    await loadDashboard();
+    await syncActiveStoreName();
+  }, [loadDashboard, syncActiveStoreName]);
+
   // Poll for Live Payment Arrival Announcements (Soundbox mode)
   const pollPaymentAnnouncements = useCallback(async () => {
     if (!currentUser || currentUser.role === 'admin') return;
@@ -94,6 +137,7 @@ export default function App() {
 
   const handleLoginSuccess = (user, role, token) => {
     setCurrentUser(user);
+    setActiveStoreName(role === 'admin' ? null : user?.name || null);
     setCurrentView(role === 'admin' ? 'admin' : 'terminal');
     loadDashboard();
   };
@@ -103,6 +147,7 @@ export default function App() {
       window.localStorage.removeItem('voiceledger_session');
     }
     setCurrentUser(null);
+    setActiveStoreName(null);
     setSummaryData(null);
     setCurrentView('terminal');
     setSoundboxAlert(null);
@@ -110,22 +155,24 @@ export default function App() {
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
-    await loadDashboard();
+    await refreshAppContext();
     setIsRefreshing(false);
   };
 
   useEffect(() => {
     if (!currentUser) return;
     loadDashboard();
+    syncActiveStoreName();
     pollPaymentAnnouncements();
 
     // Auto-refresh summary & poll payment soundbox every 3 seconds
     const interval = setInterval(() => {
       loadDashboard();
+      syncActiveStoreName();
       pollPaymentAnnouncements();
     }, 3000);
     return () => clearInterval(interval);
-  }, [currentUser, loadDashboard, pollPaymentAnnouncements]);
+  }, [currentUser, loadDashboard, syncActiveStoreName, pollPaymentAnnouncements]);
 
   // Payment simulation handler
   const handleOpenSimulate = (sale) => {
@@ -161,10 +208,11 @@ export default function App() {
 
       {/* Fixed App Header with Nav Tabs & Logout */}
       <Header
-        onRefresh={loadDashboard}
+        onRefresh={handleManualRefresh}
         currentView={currentView}
         onSelectView={setCurrentView}
         currentUser={currentUser}
+        activeStoreName={activeStoreName}
         onLogout={handleLogout}
       />
 
@@ -290,7 +338,7 @@ export default function App() {
           <View style={styles.pageWrap}>
             <AdminDashboard
               onSwitchToTerminal={() => setCurrentView('terminal')}
-              onRefreshApp={loadDashboard}
+              onRefreshApp={refreshAppContext}
             />
           </View>
         )}

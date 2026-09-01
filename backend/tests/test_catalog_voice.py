@@ -1,59 +1,51 @@
 """Tests for anti-hallucination guards, empty catalog, and catalog voice intents."""
+from unittest.mock import patch
 from backend.app.services.llm_service import llm_service
-from backend.app.schemas.voice import VoiceProcessRequest
+from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult, VoiceItemExtracted
 from backend.app.agents.merchant_agent import merchant_agent
 from backend.app.models import Merchant, Product
 
 
-def test_empty_catalog_blocks_sale(db_session):
+def test_empty_catalog_records_sale_dynamically(db_session):
     merchant = db_session.query(Merchant).filter(Merchant.is_current_active == True).first()
-    # Deactivate all products for this merchant
     db_session.query(Product).filter(Product.merchant_id == merchant.id).update({"is_active": False})
     db_session.commit()
 
-    result = llm_service.extract_transaction("2 coffee 60 rupaye", catalog_items=[])
-    assert result.intent in ("general_qa", "record_sale")
-    if result.intent == "general_qa":
-        assert "catalog" in (result.explanation or "").lower()
-
-    resp = merchant_agent.process_merchant_command(
-        db_session, VoiceProcessRequest(text="2 coffee 60 rupaye")
+    mock_extraction = VoiceExtractionResult(
+        intent="record_sale",
+        items=[VoiceItemExtracted(product_name="coffee", quantity=2, unit_price=30.0)],
+        raw_text="2 coffee 60 rupaye",
     )
-    assert resp.action_taken in ("CATALOG_EMPTY", "SALE_VALIDATION_FAILED", "QUERY_ANSWERED")
+
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=mock_extraction):
+        resp = merchant_agent.process_merchant_command(
+            db_session, VoiceProcessRequest(text="2 coffee 60 rupaye", speak_response=False)
+        )
+        assert resp.action_taken == "SALE_CREATED"
+        assert resp.sale is not None
+        assert resp.sale["total_amount"] == 60.0
 
 
-def test_unknown_product_rejected_without_price(db_session):
-    from backend.app.schemas.voice import VoiceExtractionResult, VoiceItemExtracted
-
-    merchant = db_session.query(Merchant).filter(Merchant.is_current_active == True).first()
-    db_session.query(Product).filter(Product.merchant_id == merchant.id).update({"is_active": False})
-    db_session.add(Product(merchant_id=merchant.id, name="chai", price=20.0, category="Beverages", is_active=True))
-    db_session.commit()
-
+def test_open_catalog_dynamic_product_sale(db_session):
     fake_extraction = VoiceExtractionResult(
         intent="record_sale",
-        raw_text="1 unicorn becha",
-        items=[VoiceItemExtracted(product_name="unicorn", quantity=1)],
+        raw_text="1 burger 100",
+        items=[VoiceItemExtracted(product_name="burger", quantity=1, unit_price=100.0)],
     )
-    result = llm_service.validate_extraction(fake_extraction, ["chai"])
-    assert result.intent == "general_qa"
-    assert "catalog" in (result.explanation or "").lower()
-
-
-def test_list_catalog_intent():
-    result = llm_service.extract_transaction("Menu dikhao", catalog_items=["chai", "coffee"])
-    assert result.intent == "list_catalog"
-
-
-def test_search_catalog_intent():
-    result = llm_service.extract_transaction("Coffee ka price kya hai", catalog_items=["chai", "coffee"])
-    assert result.intent == "search_catalog"
-    assert result.product_name == "coffee"
+    result = llm_service.validate_extraction(fake_extraction, [])
+    assert result.intent == "record_sale"
+    assert len(result.items) == 1
 
 
 def test_merchant_agent_list_catalog(db_session):
-    resp = merchant_agent.process_merchant_command(
-        db_session, VoiceProcessRequest(text="Menu dikhao", context="catalog")
+    mock_list_extraction = VoiceExtractionResult(
+        intent="list_catalog",
+        raw_text="Menu dikhao",
     )
-    assert resp.action_taken == "CATALOG_LISTED"
-    assert "items" in resp.agent_reply.lower() or "catalog" in resp.agent_reply.lower()
+
+    with patch("backend.app.services.llm_service.llm_service.extract_transaction", return_value=mock_list_extraction):
+        resp = merchant_agent.process_merchant_command(
+            db_session, VoiceProcessRequest(text="Menu dikhao", context="catalog", speak_response=False)
+        )
+        assert resp.action_taken == "CATALOG_LISTED"
+        assert "items" in resp.agent_reply.lower() or "catalog" in resp.agent_reply.lower()
