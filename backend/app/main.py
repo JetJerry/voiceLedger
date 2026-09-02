@@ -106,6 +106,10 @@ app.include_router(dashboard_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 
+# Canonical VoiceLedger API v1 Routers
+from backend.app.api.v1.auth import router as auth_v1_router
+app.include_router(auth_v1_router, prefix="/api/v1")
+
 
 # Frontend Static Files Mount (for local monolithic runs if built)
 frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
