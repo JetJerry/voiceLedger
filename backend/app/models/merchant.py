@@ -72,6 +72,11 @@ class Merchant(Base):
         "PaymentEvent",
         back_populates="merchant",
     )
+    devices: Mapped[List["Device"]] = relationship(
+        "Device",
+        back_populates="merchant",
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, **kwargs):
         kwargs.setdefault("id", uuid.uuid4())

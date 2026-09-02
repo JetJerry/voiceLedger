@@ -5,6 +5,8 @@ from backend.app.models.merchant_user import MerchantUser
 from backend.app.models.provider_connection import ProviderConnection
 from backend.app.models.payment import Payment, PaymentStatus
 from backend.app.models.payment_event import PaymentEvent, EventProcessingStatus
+from backend.app.models.device import Device, DeviceStatus, DeviceType
+from backend.app.models.device_session import DeviceSession, DeviceSessionStatus
 
 # Legacy prototype models preserved for backward compatibility
 from backend.app.models.legacy import (
@@ -27,6 +29,11 @@ __all__ = [
     "PaymentStatus",
     "PaymentEvent",
     "EventProcessingStatus",
+    "Device",
+    "DeviceStatus",
+    "DeviceType",
+    "DeviceSession",
+    "DeviceSessionStatus",
     # Legacy Prototype Models
     "Customer",
     "Product",
