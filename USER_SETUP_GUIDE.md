@@ -135,14 +135,15 @@ uv run alembic -c backend/alembic.ini downgrade base
 uv run alembic -c backend/alembic.ini upgrade head
 ```
 
-### Baseline Migration (`0001_initial_schema`):
-Located at `backend/alembic/versions/0001_initial_schema.py`. It generates all 11 canonical tables with foreign keys, checks, indexes, and unique constraints.
+### Applied Migrations:
+* `0001_initial_schema`: Generates the foundation 11 canonical tables with foreign keys, checks, indexes, and unique constraints.
+* `0002_user_sessions`: Adds the `user_sessions` table for server-controlled refresh-token management, token rotation, and reuse detection.
 
 ---
 
 ## 6. Canonical Data Model & Schema Reference
 
-VoiceLedger's canonical schema comprises exactly **11 models** in `backend/app/models/`:
+VoiceLedger's canonical schema comprises **12 models** in `backend/app/models/`:
 
 ```text
        ┌───────────┐         ┌───────────────────────┐
@@ -176,20 +177,35 @@ VoiceLedger's canonical schema comprises exactly **11 models** in `backend/app/m
 | # | Model | Table Name | Purpose & Key Invariants |
 |---|---|---|---|
 | 1 | `User` | `users` | Platform accounts; unique email; Argon2/bcrypt password hash; active/superuser flags. |
-| 2 | `Merchant` | `merchants` | Isolated business tenant; UUID PK; status (`ACTIVE`, `SUSPENDED`, `DEACTIVATED`); default currency (`INR`). |
-| 3 | `MerchantUser` | `merchant_users` | Tenant membership with composite unique constraint `(merchant_id, user_id)`; roles (`OWNER`, `ADMIN`, `STAFF`). |
-| 4 | `ProviderConnection` | `provider_connections` | Payment gateway configurations (Razorpay); unique `(merchant_id, provider, provider_account_reference)`. |
-| 5 | `Payment` | `payments` | Authoritative financial record; `amount_minor BIGINT`; check `amount_minor >= 0`; `length(currency) = 3`; `ON DELETE RESTRICT`; unique `(provider, provider_payment_id)`. |
-| 6 | `PaymentEvent` | `payment_events` | Immutable provider audit trail; SHA-256 `payload_hash`; unique `(provider, event_id)`; `ON DELETE SET NULL`. |
-| 7 | `Device` | `devices` | Output-only terminal (Soundbox); public-key auth; `device_token_hash`; zero financial authority. |
-| 8 | `DeviceSession` | `device_sessions` | Active WebSocket connections; unique `session_token_hash`; expiration and revocation timestamps. |
-| 9 | `VoiceNotification` | `voice_notifications` | Voice announcement dispatch tracking (`PENDING`, `QUEUED`, `DELIVERED`, `FAILED`, `CANCELLED`); attempt counters. |
-| 10 | `AuditLog` | `audit_logs` | Append-only security audit log; native PostgreSQL `JSONB` metadata & `INET` IP; credential scrubbing. |
-| 11 | `OutboxEvent` | `outbox_events` | Transactional outbox for event publication; `JSONB` payload; worker claim index `(status, available_at, created_at)` for `FOR UPDATE SKIP LOCKED`. |
+| 2 | `UserSession` | `user_sessions` | Server-controlled refresh token sessions; SHA-256 `token_hash`; token family tracking (`family_id`) for rotation and reuse detection; revocation timestamps. |
+| 3 | `Merchant` | `merchants` | Isolated business tenant; UUID PK; status (`ACTIVE`, `SUSPENDED`, `DEACTIVATED`); default currency (`INR`). |
+| 4 | `MerchantUser` | `merchant_users` | Tenant membership with composite unique constraint `(merchant_id, user_id)`; roles (`OWNER`, `ADMIN`, `STAFF`). |
+| 5 | `ProviderConnection` | `provider_connections` | Payment gateway configurations (Razorpay); unique `(merchant_id, provider, provider_account_reference)`. |
+| 6 | `Payment` | `payments` | Authoritative financial record; `amount_minor BIGINT`; check `amount_minor >= 0`; `length(currency) = 3`; `ON DELETE RESTRICT`; unique `(provider, provider_payment_id)`. |
+| 7 | `PaymentEvent` | `payment_events` | Immutable provider audit trail; SHA-256 `payload_hash`; unique `(provider, event_id)`; `ON DELETE SET NULL`. |
+| 8 | `Device` | `devices` | Output-only terminal (Soundbox); public-key auth; `device_token_hash`; zero financial authority. |
+| 9 | `DeviceSession` | `device_sessions` | Active WebSocket connections; unique `session_token_hash`; expiration and revocation timestamps. |
+| 10 | `VoiceNotification` | `voice_notifications` | Voice announcement dispatch tracking (`PENDING`, `QUEUED`, `DELIVERED`, `FAILED`, `CANCELLED`); attempt counters. |
+| 11 | `AuditLog` | `audit_logs` | Append-only security audit log; native PostgreSQL `JSONB` metadata & `INET` IP; credential scrubbing. |
+| 12 | `OutboxEvent` | `outbox_events` | Transactional outbox for event publication; `JSONB` payload; worker claim index `(status, available_at, created_at)` for `FOR UPDATE SKIP LOCKED`. |
 
 ---
 
-## 7. Running the Application
+## 7. Authentication & Token Architecture (API v1)
+
+VoiceLedger implements an enterprise-grade authentication system under `/api/v1/auth/`:
+- **Passwords**: Hashed with **Argon2id** ($m=64\text{ MiB}, t=3, p=4$) with unique salts.
+- **Access Tokens**: Short-lived (15 min default) signed JWTs (`HS256`, configurable via `JWT_SECRET`). Minimum claims: `sub`, `type="access"`, `jti`, `iat`, `exp`.
+- **Refresh Tokens**: Opaque 256-bit cryptographically secure random tokens. Only their SHA-256 hash is persisted server-side.
+- **Token Rotation & Reuse Detection**: Every refresh request rotates the token and invalidates the old one. If an already-rotated token is presented (potential token theft), the entire session family (`family_id`) is immediately revoked.
+- **Endpoints**:
+  - `POST /api/v1/auth/register` — User registration.
+  - `POST /api/v1/auth/login` — Verifies credentials; issues short-lived access token + rotating refresh token.
+  - `POST /api/v1/auth/refresh` — Rotates refresh token; issues new access + refresh tokens.
+  - `POST /api/v1/auth/logout` — Revokes refresh session.
+  - `GET /api/v1/auth/me` — Protected endpoint returning current user profile (`Authorization: Bearer <access_token>`).
+
+## 8. Running the Application
 
 ### Option A: Running with `uv` (Recommended)
 ```bash
@@ -218,7 +234,7 @@ python main.py
 
 ---
 
-## 8. Health Checks & Observability
+## 9. Health Checks & Observability
 
 VoiceLedger provides deep liveness and readiness health monitoring endpoints.
 
@@ -257,7 +273,7 @@ Every request processed by VoiceLedger is tagged with a unique `X-Request-ID` HT
 
 ---
 
-## 9. Automated Testing & Verification
+## 10. Automated Testing & Verification
 
 VoiceLedger features an extensive automated test suite covering unit, integration, migration, and backward-compatibility tests.
 
@@ -275,14 +291,17 @@ backend/tests/
 ├── test_phase1_3_device_models.py           # Device, DeviceSession, public keys, token hashes
 ├── test_phase1_4_notification_audit_outbox.py # VoiceNotification, AuditLog (JSONB/INET), OutboxEvent
 ├── test_phase1_5_migration_integrity.py     # Consolidated Alembic migration, live PostgreSQL schema audit
+├── test_phase2_1_password_security.py       # Argon2id password hashing, validation, constant-time verification
+├── test_phase2_2_registration_and_login.py  # User registration, email normalization, credential verification
+├── test_phase2_3_tokens_and_sessions.py     # JWT access tokens, rotating refresh sessions, reuse detection, logout, get_current_user
 └── (Legacy prototype compatibility tests)   # Isolated Kirana voice tests, webhook & LangGraph tests
 ```
 
-**Status**: 120 tests passed across all suites (0 failures, 0 regressions).
+**Status**: 178 tests passed across all suites (0 failures, 0 regressions).
 
 ---
 
-## 10. Frontend Setup (Web & Universal Mobile)
+## 11. Frontend Setup (Web & Universal Mobile)
 
 The frontend is built with React Native (Expo) and runs universally on Web, Android, and iOS.
 

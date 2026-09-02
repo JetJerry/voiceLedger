@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # Authentication & Security
-    JWT_SECRET: str = ""
+    JWT_SECRET: str = "voiceledger_jwt_signing_secret_dev_environment_key_2026_min_32"
+    JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TTL_MINUTES: int = 15
     JWT_REFRESH_TTL_DAYS: int = 7
     ARGON2_TIME_COST: int = 3

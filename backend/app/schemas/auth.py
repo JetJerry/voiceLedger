@@ -77,4 +77,29 @@ class UserLoginResponse(BaseModel):
     success: bool = True
     status: str = "authenticated"
     message: str = "Credentials verified successfully"
+    access_token: str = Field(..., description="Short-lived JWT access token")
+    refresh_token: str = Field(..., description="Opaque random refresh token")
+    token_type: str = "bearer"
+    expires_in: int = Field(..., description="Access token expiration in seconds")
     user: UserResponse
+
+
+class TokenRefreshRequest(BaseModel):
+    refresh_token: str = Field(..., description="Current opaque refresh token")
+
+
+class TokenRefreshResponse(BaseModel):
+    success: bool = True
+    token_type: str = "bearer"
+    access_token: str = Field(..., description="Newly issued short-lived JWT access token")
+    refresh_token: str = Field(..., description="Newly issued rotating refresh token")
+    expires_in: int = Field(..., description="Access token expiration in seconds")
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: Optional[str] = Field(None, description="Optional refresh token to revoke")
+
+
+class LogoutResponse(BaseModel):
+    success: bool = True
+    message: str = "Logged out successfully"

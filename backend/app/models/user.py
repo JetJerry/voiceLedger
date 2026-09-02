@@ -62,6 +62,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    sessions: Mapped[List["UserSession"]] = relationship(
+        "UserSession",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     def __init__(self, **kwargs):
         kwargs.setdefault("id", uuid.uuid4())

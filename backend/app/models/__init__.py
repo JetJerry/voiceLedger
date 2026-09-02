@@ -1,5 +1,5 @@
-# Canonical VoiceLedger Models
 from backend.app.models.user import User
+from backend.app.models.user_session import UserSession
 from backend.app.models.merchant import Merchant
 from backend.app.models.merchant_user import MerchantUser
 from backend.app.models.provider_connection import ProviderConnection
@@ -25,6 +25,7 @@ from backend.app.models.legacy import (
 __all__ = [
     # Canonical VoiceLedger Models
     "User",
+    "UserSession",
     "Merchant",
     "MerchantUser",
     "ProviderConnection",

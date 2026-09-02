@@ -5,7 +5,12 @@ Implements Argon2id password hashing following OWASP and RFC 9106 standards.
 All password operations are one-way, use unique automated 16-byte random salts,
 and employ constant-time comparison.
 """
-from typing import Optional
+from typing import Optional, Union, Dict, Any
+import hashlib
+import secrets
+import uuid
+from datetime import datetime, timedelta, timezone
+import jwt
 import argon2
 from argon2 import Type
 from argon2.exceptions import (
@@ -159,3 +164,117 @@ def needs_rehash(
         return True
     except Exception:
         return False
+
+
+# =====================================================================
+# Token & Session Security Utilities (Phase 2.3)
+# =====================================================================
+
+class TokenError(Exception):
+    """Base exception for token errors."""
+    pass
+
+
+class TokenExpiredError(TokenError):
+    """Raised when an access or refresh token has expired."""
+    pass
+
+
+class InvalidTokenError(TokenError):
+    """Raised when a token signature, type, or claims structure is invalid."""
+    pass
+
+
+class TokenReuseError(TokenError):
+    """Raised when an already-revoked refresh token is reused."""
+    pass
+
+
+def generate_refresh_token() -> str:
+    """
+    Generate an opaque, cryptographically secure 256-bit random refresh token.
+    Uses secrets.token_urlsafe to ensure high entropy without plaintext patterns.
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_token(token: str) -> str:
+    """
+    Compute the SHA-256 hex digest of an opaque token for secure server-side storage.
+    Ensures plaintext refresh tokens are never persisted in the database.
+    """
+    if not isinstance(token, str) or not token:
+        raise InvalidTokenError("Cannot hash empty or non-string token")
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_access_token(
+    user_id: Union[uuid.UUID, str],
+    email: Optional[str] = None,
+    expires_delta: Optional[timedelta] = None,
+    additional_claims: Optional[Dict[str, Any]] = None,
+) -> str:
+    """
+    Create a signed short-lived JWT access token.
+
+    Contains standard claims:
+    - 'sub': User UUID as string
+    - 'type': 'access'
+    - 'jti': Unique token identifier UUID
+    - 'iat': Issued-at timestamp (UTC)
+    - 'exp': Expiration timestamp (UTC, default 15 minutes)
+    """
+    now = datetime.now(timezone.utc)
+    expires_in = expires_delta or timedelta(minutes=settings.JWT_ACCESS_TTL_MINUTES)
+    expire = now + expires_in
+
+    payload: Dict[str, Any] = {
+        "sub": str(user_id),
+        "type": "access",
+        "jti": str(uuid.uuid4()),
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+    }
+    if email:
+        payload["email"] = email
+    if additional_claims:
+        payload.update(additional_claims)
+
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+    )
+
+
+def decode_access_token(token: str) -> Dict[str, Any]:
+    """
+    Decode and verify a JWT access token.
+
+    Validates:
+    - Cryptographic signature using configured algorithm (HS256) and secret.
+    - Expiration ('exp') timestamp.
+    - Token type claim strictly equals 'access' (prevents token-type confusion).
+    - Presence of required claims ('sub', 'type', 'exp', 'iat').
+    """
+    if not token or not isinstance(token, str):
+        raise InvalidTokenError("Invalid token")
+
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+            options={"require": ["sub", "exp", "iat", "type"]},
+        )
+        if payload.get("type") != "access":
+            raise InvalidTokenError("Invalid token type")
+        return payload
+    except InvalidTokenError:
+        raise
+    except jwt.ExpiredSignatureError as exc:
+        raise TokenExpiredError("Token has expired") from exc
+    except jwt.InvalidTokenError as exc:
+        raise InvalidTokenError("Invalid token") from exc
+    except Exception as exc:
+        raise InvalidTokenError("Token verification failed") from exc
