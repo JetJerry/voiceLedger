@@ -42,12 +42,6 @@ class MerchantUser(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-        nullable=False,
-    )
 
     # Relationships
     merchant: Mapped["Merchant"] = relationship(
@@ -68,7 +62,6 @@ class MerchantUser(Base):
         kwargs.setdefault("id", uuid.uuid4())
         kwargs.setdefault("role", "STAFF")
         kwargs.setdefault("created_at", datetime.now(timezone.utc))
-        kwargs.setdefault("updated_at", datetime.now(timezone.utc))
         super().__init__(**kwargs)
 
     def __repr__(self) -> str:

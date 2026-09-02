@@ -205,6 +205,19 @@ VoiceLedger implements an enterprise-grade authentication system under `/api/v1/
   - `POST /api/v1/auth/logout` — Revokes refresh session.
   - `GET /api/v1/auth/me` — Protected endpoint returning current user profile (`Authorization: Bearer <access_token>`).
 
+### Merchant Context, RBAC & Tenant Isolation (Phase 2.4):
+- **Server-Side Context Resolution**: `get_current_merchant` / `get_current_merchant_membership` resolves merchant organization via `X-Merchant-ID` header or sole membership. Validates membership in PostgreSQL; rejects arbitrary client merchant IDs (HTTP 403).
+- **Role-Based Access Control (RBAC)**: Supports `OWNER`, `ADMIN`, `STAFF` via explicit allowed-role sets (`require_role("OWNER")`, `require_role("OWNER", "ADMIN")`, `require_role("OWNER", "ADMIN", "STAFF")`). Roles cannot be spoofed via client request headers or body.
+- **Strict Query-Level Tenant Isolation**: All merchant-owned resource accesses (`Payment`, `PaymentEvent`, `Device`, `DeviceSession`, `VoiceNotification`, `ProviderConnection`) are filtered at query level `(id, merchant_id)`. Direct and indirect relationship navigation guarantees zero cross-tenant leakage and eliminates IDOR vulnerabilities.
+- **Endpoints**:
+  - `GET /api/v1/merchants/context` — Resolves active merchant details and caller's role.
+  - `GET /api/v1/merchants/owner-only` — OWNER-only operation guard.
+  - `GET /api/v1/merchants/admin-only` — ADMIN / OWNER operation guard.
+  - `GET /api/v1/merchants/staff-accessible` — STAFF, ADMIN, or OWNER access.
+  - `GET /api/v1/merchants/payments/{payment_id}` — Tenant-isolated payment retrieval.
+  - `GET /api/v1/merchants/devices/{device_id}` — Tenant-isolated device retrieval.
+  - `GET /api/v1/merchants/device-sessions/{session_id}` — Indirect tenant-isolated device session retrieval.
+
 ## 8. Running the Application
 
 ### Option A: Running with `uv` (Recommended)
@@ -294,10 +307,11 @@ backend/tests/
 ├── test_phase2_1_password_security.py       # Argon2id password hashing, validation, constant-time verification
 ├── test_phase2_2_registration_and_login.py  # User registration, email normalization, credential verification
 ├── test_phase2_3_tokens_and_sessions.py     # JWT access tokens, rotating refresh sessions, reuse detection, logout, get_current_user
+├── test_phase2_4_merchant_rbac_and_tenancy.py # Merchant context, RBAC (OWNER/ADMIN/STAFF), tenant isolation & IDOR tests
 └── (Legacy prototype compatibility tests)   # Isolated Kirana voice tests, webhook & LangGraph tests
 ```
 
-**Status**: 178 tests passed across all suites (0 failures, 0 regressions).
+**Status**: 206 tests passed across all suites (0 failures, 0 regressions).
 
 ---
 
