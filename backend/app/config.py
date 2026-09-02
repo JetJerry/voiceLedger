@@ -1,7 +1,7 @@
 import os
-from typing import List
+from typing import List, Union
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
 
 
 class Settings(BaseSettings):
@@ -9,52 +9,64 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
 
-    # Environment
-    ENVIRONMENT: str = "development"
+    # Application Environment
+    APP_ENV: str = "development"
+    ENVIRONMENT: str = "development"  # Alias for backward compatibility
     DEBUG: bool = True
 
     # Logging
     LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "%(asctime)s %(levelname)s %(name)s %(message)s"
+    LOG_FORMAT: str = "%(asctime)s [%(levelname)s] %(name)s (request_id=%(request_id)s): %(message)s"
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./voiceledger.db"
+    # Database (PostgreSQL is the authoritative ledger database)
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/voiceledger"
 
-    # Razorpay API Credentials
+    # Redis (For event queue, workers, and caching)
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # Authentication & Security
+    JWT_SECRET: str = ""
+    JWT_ACCESS_TTL_MINUTES: int = 15
+    JWT_REFRESH_TTL_DAYS: int = 7
+
+    # Razorpay Provider Credentials
     RAZORPAY_KEY_ID: str = ""
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
 
-    # AI / LLM Configuration (Groq primary, Gemini fallback)
+    # Network & Server configuration
+    HOST: str = "127.0.0.1"
+    PORT: int = 8000
+    CORS_ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
+    CORS_ORIGINS: List[str] = ["*"]  # Alias for backward compatibility
+
+    # Legacy prototype fields preserved for compatibility
+    DEFAULT_MERCHANT_NAME: str = "VoiceLedger Merchant"
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.6-flash"
     OPENAI_API_KEY: str = ""
-    LLM_PROVIDER: str = "groq"  # groq, gemini, openai, or mock
-    LLM_MODEL: str = "llama-3.3-70b-versatile"  # legacy alias; Groq uses GROQ_MODEL
-
-    # LangSmith Tracing & Observability
-    LANGCHAIN_TRACING_V2: bool = True
+    LLM_PROVIDER: str = "mock"
+    LLM_MODEL: str = "llama-3.3-70b-versatile"
+    LANGCHAIN_TRACING_V2: bool = False
     LANGCHAIN_API_KEY: str = ""
     LANGCHAIN_PROJECT: str = "voiceledger-agent"
     LANGCHAIN_ENDPOINT: str = "https://api.smith.langchain.com"
-    
-    # HuggingFace Model Configuration (Optimized for 4GB GPU & High-Speed CPU)
-    WHISPER_MODEL_SIZE: str = "base"        # base (~140MB, <100ms) or small (~460MB)
-    WHISPER_DEVICE: str = "auto"            # auto, cuda, or cpu
-    WHISPER_COMPUTE_TYPE: str = "float16"   # float16 (GPU), int8 (CPU)
-    HF_TTS_MODEL: str = "facebook/mms-tts-hin"  # HuggingFace TTS model ID
-    TTS_USE_LLM_REFINEMENT: bool = True     # Polish agent replies for natural speech via LLM
-    TTS_PROVIDER: str = "edge"              # edge, hf, auto
+    WHISPER_MODEL_SIZE: str = "base"
+    WHISPER_DEVICE: str = "auto"
+    WHISPER_COMPUTE_TYPE: str = "float16"
+    HF_TTS_MODEL: str = "facebook/mms-tts-hin"
+    TTS_USE_LLM_REFINEMENT: bool = False
+    TTS_PROVIDER: str = "edge"
     LLM_REQUEST_TIMEOUT_SECONDS: int = 30
-    DEFAULT_MERCHANT_NAME: str = "VoiceLedger Merchant"
 
-    # Server configuration (127.0.0.1 for local browser compatibility on Windows)
-    HOST: str = "127.0.0.1"
-    PORT: int = 8000
-    CORS_ORIGINS: List[str] = ["*"]
-
+    @field_validator("CORS_ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     model_config = SettingsConfigDict(
         env_file=".env",

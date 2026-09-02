@@ -1,22 +1,47 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
-    container_name: voiceledger-app
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: voiceledger-api
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/voiceledger
-      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
-      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
-      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - APP_ENV=development
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/voiceledger
+      - REDIS_URL=redis://redis:6379/0
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET:-}
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_do_not_use_in_production_32}
+      - LOG_LEVEL=INFO
     depends_on:
-      - db
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
-  db:
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: voiceledger-worker
+    command: ["python", "-c", "import time; print('VoiceLedger background worker placeholder running...'); time.sleep(86400)"]
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/voiceledger
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
     image: postgres:16-alpine
     container_name: voiceledger-postgres
     environment:
@@ -27,6 +52,23 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d voiceledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: voiceledger-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:
