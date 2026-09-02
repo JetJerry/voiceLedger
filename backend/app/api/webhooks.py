@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Request, Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import WebhookEvent
+from backend.app.models.legacy import WebhookEvent
 from backend.app.services.razorpay_service import razorpay_service
 from backend.app.services.reconciliation_service import reconciliation_service
 

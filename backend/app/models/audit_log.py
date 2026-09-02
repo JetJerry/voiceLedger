@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 from sqlalchemy import (
     String,
     DateTime,
@@ -11,6 +11,9 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB, INET
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.merchant import Merchant
 
 PROHIBITED_METADATA_KEYS = {
     "password",

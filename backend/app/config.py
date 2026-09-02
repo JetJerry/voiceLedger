@@ -1,6 +1,6 @@
 import os
 from typing import List, Union
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -71,6 +71,26 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """
+        Guarantees that production environments fail immediately if configured
+        with default, weak, or hard-coded development signing secrets.
+        """
+        env = (self.ENVIRONMENT or self.APP_ENV or "development").strip().lower()
+        if env in ("production", "prod"):
+            insecure_keys = {
+                "voiceledger_jwt_signing_secret_dev_environment_key_2026_min_32",
+                "secret",
+                "changeme",
+                "dev_secret",
+            }
+            if not self.JWT_SECRET or self.JWT_SECRET in insecure_keys or len(self.JWT_SECRET) < 32:
+                raise ValueError(
+                    "Production configuration error: JWT_SECRET must be configured with a high-entropy secret of at least 32 characters in production."
+                )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

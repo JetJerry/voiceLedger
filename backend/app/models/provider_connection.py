@@ -1,11 +1,14 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.merchant import Merchant
 
 
 class ProviderConnection(Base):

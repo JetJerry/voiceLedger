@@ -208,6 +208,47 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+SENSITIVE_KEYS = {
+    "password",
+    "raw_password",
+    "new_password",
+    "confirm_password",
+    "token",
+    "access_token",
+    "refresh_token",
+    "token_hash",
+    "jwt_secret",
+    "secret",
+    "key_secret",
+    "webhook_secret",
+    "hashed_password",
+    "authorization",
+}
+
+
+def sanitize_sensitive_data(data: Any) -> Any:
+    """
+    Recursively sanitize dictionaries and lists to prevent sensitive authentication
+    data (passwords, tokens, secrets, hashes) from appearing in logs or audit records.
+    """
+    if isinstance(data, dict):
+        sanitized = {}
+        for k, v in data.items():
+            if str(k).lower() in SENSITIVE_KEYS:
+                sanitized[k] = "[REDACTED]"
+            elif isinstance(v, (dict, list)):
+                sanitized[k] = sanitize_sensitive_data(v)
+            else:
+                sanitized[k] = v
+        return sanitized
+    elif isinstance(data, list):
+        return [sanitize_sensitive_data(item) for item in data]
+    return data
+
+
+PROTECTED_CLAIMS = {"sub", "type", "iat", "exp", "jti"}
+
+
 def create_access_token(
     user_id: Union[uuid.UUID, str],
     email: Optional[str] = None,
@@ -223,6 +264,8 @@ def create_access_token(
     - 'jti': Unique token identifier UUID
     - 'iat': Issued-at timestamp (UTC)
     - 'exp': Expiration timestamp (UTC, default 15 minutes)
+
+    Protected security claims cannot be overridden via additional_claims.
     """
     now = datetime.now(timezone.utc)
     expires_in = expires_delta or timedelta(minutes=settings.JWT_ACCESS_TTL_MINUTES)
@@ -238,6 +281,9 @@ def create_access_token(
     if email:
         payload["email"] = email
     if additional_claims:
+        for k in additional_claims:
+            if k in PROTECTED_CLAIMS:
+                raise InvalidTokenError(f"Protected claim '{k}' cannot be overridden in additional_claims")
         payload.update(additional_claims)
 
     return jwt.encode(
@@ -255,7 +301,8 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     - Cryptographic signature using configured algorithm (HS256) and secret.
     - Expiration ('exp') timestamp.
     - Token type claim strictly equals 'access' (prevents token-type confusion).
-    - Presence of required claims ('sub', 'type', 'exp', 'iat').
+    - Presence of required claims ('sub', 'type', 'exp', 'iat', 'jti').
+    - 'sub' claim format must be a valid non-empty UUID string.
     """
     if not token or not isinstance(token, str):
         raise InvalidTokenError("Invalid token")
@@ -269,6 +316,16 @@ def decode_access_token(token: str) -> Dict[str, Any]:
         )
         if payload.get("type") != "access":
             raise InvalidTokenError("Invalid token type")
+
+        # Validate that subject is a valid UUID
+        sub = payload.get("sub")
+        if not sub or not isinstance(sub, str):
+            raise InvalidTokenError("Invalid subject claim in token")
+        try:
+            uuid.UUID(sub)
+        except (ValueError, TypeError):
+            raise InvalidTokenError("Subject claim is not a valid UUID")
+
         return payload
     except InvalidTokenError:
         raise

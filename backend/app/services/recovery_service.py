@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from backend.app.models import Sale, RecoveryAction, Customer
+from backend.app.models.legacy import Sale, RecoveryAction, Customer
 from backend.app.schemas.recovery import RecoveryPriorityItem
 from backend.app.services.razorpay_service import razorpay_service
 

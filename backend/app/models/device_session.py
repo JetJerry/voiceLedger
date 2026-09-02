@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 from sqlalchemy import (
     String,
     DateTime,
@@ -14,6 +14,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.device import Device
 
 
 class DeviceSessionStatus(str, enum.Enum):

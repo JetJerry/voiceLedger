@@ -1,11 +1,20 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.merchant_user import MerchantUser
+    from backend.app.models.provider_connection import ProviderConnection
+    from backend.app.models.payment import Payment
+    from backend.app.models.payment_event import PaymentEvent
+    from backend.app.models.device import Device
+    from backend.app.models.voice_notification import VoiceNotification
+    from backend.app.models.audit_log import AuditLog
 
 
 class Merchant(Base):

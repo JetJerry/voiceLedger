@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 from sqlalchemy import (
     String,
     BigInteger,
@@ -15,6 +15,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from backend.app.db.base import Base
+
+if TYPE_CHECKING:
+    from backend.app.models.merchant import Merchant
+    from backend.app.models.payment_event import PaymentEvent
+    from backend.app.models.voice_notification import VoiceNotification
 
 
 class PaymentStatus(str, enum.Enum):

@@ -2,10 +2,10 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from backend.app.config import settings
 from backend.app.core.logging import setup_logging, request_id_ctx, logger
@@ -15,12 +15,9 @@ from backend.app.api.health import router as health_router
 # Legacy routers preserved for backward compatibility
 from backend.app.api.voice import router as voice_router
 from backend.app.api.sales import router as sales_router
-from backend.app.api.payments import router as payments_router
-from backend.app.api.webhooks import router as webhooks_router
 from backend.app.api.recovery import router as recovery_router
 from backend.app.api.dashboard import router as dashboard_router
 from backend.app.api.admin import router as admin_router
-from backend.app.api.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -45,6 +42,23 @@ app = FastAPI(
     description="VoiceLedger: Payment event and voice notification platform",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """
+    Inject baseline security headers on every response:
+    - X-Content-Type-Options: nosniff
+    - X-Frame-Options: DENY
+    - X-XSS-Protection: 1; mode=block
+    - Referrer-Policy: strict-origin-when-cross-origin
+    """
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 @app.middleware("http")
@@ -77,6 +91,20 @@ async def request_id_and_logging_middleware(request: Request, call_next):
         request_id_ctx.reset(token)
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception safety net: prevents stack traces, internal SQL errors,
+    or database connection details from being exposed to clients in response bodies.
+    """
+    req_id = request.headers.get("X-Request-ID", "unknown")
+    logger.exception("Unhandled server error: %s (request_id=%s)", exc, req_id)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error", "request_id": req_id},
+    )
+
+
 # CORS Middleware configuration
 allowed_origins = (
     settings.CORS_ALLOWED_ORIGINS
@@ -96,21 +124,20 @@ app.add_middleware(
 # Core Health Check Router (mounted at root /health and /api/health)
 app.include_router(health_router)
 
-# Legacy Routers preserved under /api for compatibility
+# Legacy Routers preserved under /api for compatibility (non-financial/catalog prototype only)
 app.include_router(voice_router, prefix=settings.API_V1_STR)
 app.include_router(sales_router, prefix=settings.API_V1_STR)
-app.include_router(payments_router, prefix=settings.API_V1_STR)
-app.include_router(webhooks_router, prefix=settings.API_V1_STR)
 app.include_router(recovery_router, prefix=settings.API_V1_STR)
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
 app.include_router(admin_router, prefix=settings.API_V1_STR)
-app.include_router(auth_router, prefix=settings.API_V1_STR)
 
-# Canonical VoiceLedger API v1 Routers
+# Canonical VoiceLedger API v1 Routers (Authoritative Production Path)
 from backend.app.api.v1.auth import router as auth_v1_router
 from backend.app.api.v1.merchants import router as merchants_v1_router
+from backend.app.api.v1.webhooks import router as webhooks_v1_router
 app.include_router(auth_v1_router, prefix="/api/v1")
 app.include_router(merchants_v1_router, prefix="/api/v1")
+app.include_router(webhooks_v1_router, prefix="/api/v1")
 
 
 # Frontend Static Files Mount (for local monolithic runs if built)

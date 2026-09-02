@@ -1,3 +1,9 @@
+"""
+VoiceLedger Canonical Models Package.
+
+Authoritative SQLAlchemy model exports for the VoiceLedger financial core.
+All models inherit from Base (DeclarativeBase) and are managed by Alembic.
+"""
 from backend.app.models.user import User
 from backend.app.models.user_session import UserSession
 from backend.app.models.merchant import Merchant
@@ -11,19 +17,7 @@ from backend.app.models.voice_notification import VoiceNotification, VoiceNotifi
 from backend.app.models.audit_log import AuditLog
 from backend.app.models.outbox_event import OutboxEvent, OutboxStatus
 
-# Legacy prototype models preserved for backward compatibility
-from backend.app.models.legacy import (
-    Customer,
-    Product,
-    Sale,
-    SaleItem,
-    RecoveryAction,
-    MerchantProfile,
-    WebhookEvent,
-)
-
 __all__ = [
-    # Canonical VoiceLedger Models
     "User",
     "UserSession",
     "Merchant",
@@ -43,12 +37,4 @@ __all__ = [
     "AuditLog",
     "OutboxEvent",
     "OutboxStatus",
-    # Legacy Prototype Models
-    "Customer",
-    "Product",
-    "Sale",
-    "SaleItem",
-    "RecoveryAction",
-    "MerchantProfile",
-    "WebhookEvent",
 ]

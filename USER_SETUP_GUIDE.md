@@ -308,10 +308,17 @@ backend/tests/
 ├── test_phase2_2_registration_and_login.py  # User registration, email normalization, credential verification
 ├── test_phase2_3_tokens_and_sessions.py     # JWT access tokens, rotating refresh sessions, reuse detection, logout, get_current_user
 ├── test_phase2_4_merchant_rbac_and_tenancy.py # Merchant context, RBAC (OWNER/ADMIN/STAFF), tenant isolation & IDOR tests
-└── (Legacy prototype compatibility tests)   # Isolated Kirana voice tests, webhook & LangGraph tests
+├── test_phase2_5_security_hardening.py     # Security hardening: JWT algorithm confusion, production secrets, audit sanitization, security headers
+├── test_phase3_1_provider_abstraction.py   # PaymentProvider interface, NormalizedPayment, NormalizedPaymentEvent, provider error hierarchy
+├── test_phase3_2_razorpay_adapter.py       # RazorpayClient, RazorpayProvider adapter, status/method mapping, error translation, zero secret leakage
+├── test_phase3_3_razorpay_webhook_verification.py # RazorpayWebhookVerifier, raw-body HMAC-SHA256, timing-safe compare_digest, size limit, zero financial mutation
+├── test_phase3_4_webhook_ingestion_and_deduplication.py # WebhookIngestionService, Level 1 (provider, event_id) deduplication, safe concurrency, zero Payment mutations
+├── test_phase3_5_integration_verification.py # Razorpay end-to-end boundary verification, tampering, adapter flows, and zero Phase 4 leakage
+├── test_pre_phase4_cleanup.py               # Verification of unmounted conflicting legacy routes (/api/auth, /api/payments, /api/webhooks) and canonical v1 exclusivity
+└── (Legacy prototype compatibility tests)   # Isolated Kirana voice & sales tests
 ```
 
-**Status**: 206 tests passed across all suites (0 failures, 0 regressions).
+**Status**: 304 canonical VoiceLedger tests passed with 100% success. Conflicting legacy financial/auth routes (`/api/auth`, `/api/payments`, `/api/webhooks`) are cleanly unmounted from production `main.py`.
 
 ---
 

@@ -211,10 +211,11 @@ class TenantService:
         self,
         resource: Any,
         merchant_id: uuid.UUID,
+        db: Optional[Session] = None,
     ) -> None:
         """
         Assert that a given loaded entity belongs to the expected merchant.
-        Handles direct and indirect (DeviceSession) ownership.
+        Handles direct and indirect (DeviceSession) ownership, even when relations are unloaded.
         """
         if resource is None:
             return
@@ -223,8 +224,70 @@ class TenantService:
             if resource.merchant_id != merchant_id:
                 raise CrossTenantAccessError("Cross-tenant resource access violation")
         elif isinstance(resource, DeviceSession):
-            if not resource.device or resource.device.merchant_id != merchant_id:
-                raise CrossTenantAccessError("Cross-tenant device session access violation")
+            if resource.device is not None:
+                if resource.device.merchant_id != merchant_id:
+                    raise CrossTenantAccessError("Cross-tenant device session access violation")
+            elif db is not None:
+                dev = db.query(Device).filter(Device.id == resource.device_id).first()
+                if not dev or dev.merchant_id != merchant_id:
+                    raise CrossTenantAccessError("Cross-tenant device session access violation")
+
+    def update_device_for_merchant(
+        self,
+        db: Session,
+        device_id: uuid.UUID,
+        merchant_id: uuid.UUID,
+        device_name: Optional[str] = None,
+        status: Optional[str] = None,
+    ) -> Optional[Device]:
+        """
+        Update Device attributes scoped strictly to merchant_id at query level.
+        Guarantees that cross-tenant mutations are prevented.
+        """
+        device = (
+            db.query(Device)
+            .filter(
+                Device.id == device_id,
+                Device.merchant_id == merchant_id,
+            )
+            .first()
+        )
+        if not device:
+            return None
+
+        if device_name is not None:
+            device.device_name = device_name
+        if status is not None:
+            device.status = status
+
+        db.commit()
+        db.refresh(device)
+        return device
+
+    def delete_device_for_merchant(
+        self,
+        db: Session,
+        device_id: uuid.UUID,
+        merchant_id: uuid.UUID,
+    ) -> bool:
+        """
+        Delete Device scoped strictly to merchant_id at query level.
+        Prevents unauthorized deletion across tenants.
+        """
+        device = (
+            db.query(Device)
+            .filter(
+                Device.id == device_id,
+                Device.merchant_id == merchant_id,
+            )
+            .first()
+        )
+        if not device:
+            return False
+
+        db.delete(device)
+        db.commit()
+        return True
 
 
 tenant_service = TenantService()
