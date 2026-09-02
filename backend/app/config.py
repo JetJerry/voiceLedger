@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     JWT_SECRET: str = ""
     JWT_ACCESS_TTL_MINUTES: int = 15
     JWT_REFRESH_TTL_DAYS: int = 7
+    ARGON2_TIME_COST: int = 3
+    ARGON2_MEMORY_COST_KIB: int = 65536  # 64 MiB
+    ARGON2_PARALLELISM: int = 4
 
     # Razorpay Provider Credentials
     RAZORPAY_KEY_ID: str = ""

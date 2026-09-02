@@ -71,5 +71,15 @@ class User(Base):
         kwargs.setdefault("updated_at", datetime.now(timezone.utc))
         super().__init__(**kwargs)
 
+    def set_password(self, password: str) -> None:
+        """Hash and set password using Argon2id."""
+        from backend.app.core.security import hash_password
+        self.hashed_password = hash_password(password)
+
+    def verify_password(self, password: str) -> bool:
+        """Verify candidate password against user's stored Argon2id hash."""
+        from backend.app.core.security import verify_password
+        return verify_password(password, self.hashed_password)
+
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} is_active={self.is_active}>"
