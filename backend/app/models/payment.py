@@ -114,6 +114,11 @@ class Payment(Base):
         back_populates="payment",
         cascade="all, delete-orphan",
     )
+    voice_notifications: Mapped[List["VoiceNotification"]] = relationship(
+        "VoiceNotification",
+        back_populates="payment",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         # Primary financial idempotency constraint

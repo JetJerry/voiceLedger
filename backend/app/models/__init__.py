@@ -7,6 +7,9 @@ from backend.app.models.payment import Payment, PaymentStatus
 from backend.app.models.payment_event import PaymentEvent, EventProcessingStatus
 from backend.app.models.device import Device, DeviceStatus, DeviceType
 from backend.app.models.device_session import DeviceSession, DeviceSessionStatus
+from backend.app.models.voice_notification import VoiceNotification, VoiceNotificationStatus
+from backend.app.models.audit_log import AuditLog
+from backend.app.models.outbox_event import OutboxEvent, OutboxStatus
 
 # Legacy prototype models preserved for backward compatibility
 from backend.app.models.legacy import (
@@ -34,6 +37,11 @@ __all__ = [
     "DeviceType",
     "DeviceSession",
     "DeviceSessionStatus",
+    "VoiceNotification",
+    "VoiceNotificationStatus",
+    "AuditLog",
+    "OutboxEvent",
+    "OutboxStatus",
     # Legacy Prototype Models
     "Customer",
     "Product",

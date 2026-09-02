@@ -107,6 +107,11 @@ class Device(Base):
         back_populates="device",
         cascade="all, delete-orphan",
     )
+    voice_notifications: Mapped[List["VoiceNotification"]] = relationship(
+        "VoiceNotification",
+        back_populates="device",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         CheckConstraint(

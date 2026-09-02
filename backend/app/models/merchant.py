@@ -77,6 +77,15 @@ class Merchant(Base):
         back_populates="merchant",
         cascade="all, delete-orphan",
     )
+    voice_notifications: Mapped[List["VoiceNotification"]] = relationship(
+        "VoiceNotification",
+        back_populates="merchant",
+        cascade="all, delete-orphan",
+    )
+    audit_logs: Mapped[List["AuditLog"]] = relationship(
+        "AuditLog",
+        back_populates="merchant",
+    )
 
     def __init__(self, **kwargs):
         kwargs.setdefault("id", uuid.uuid4())
