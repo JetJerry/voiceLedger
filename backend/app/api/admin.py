@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Merchant, Sale, Product
+from backend.app.models.legacy import LegacyMerchant as Merchant, Sale, Product
 from backend.app.schemas.admin import (
     AdminPlatformMetrics,
     MerchantSummaryItem,

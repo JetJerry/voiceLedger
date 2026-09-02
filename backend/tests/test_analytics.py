@@ -1,7 +1,7 @@
 import io
 import openpyxl
 import pytest
-from backend.app.models import Merchant, Product, Sale, SaleItem
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
 
 
 def test_sales_analytics_periods(client, db_session):

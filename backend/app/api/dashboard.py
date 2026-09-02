@@ -3,7 +3,7 @@ from datetime import datetime, date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Sale, Merchant
+from backend.app.models.legacy import LegacyMerchant as Merchant, Sale
 from backend.app.schemas.dashboard import DashboardSummary
 from backend.app.schemas.sale import SaleResponse
 from backend.app.services.recovery_service import recovery_service

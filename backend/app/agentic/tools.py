@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from langsmith import traceable
 
-from backend.app.models import Merchant, Product, Sale, Payment, Customer
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, LegacyPayment as Payment, Customer
 from backend.app.schemas.sale import SaleCreate, SaleItemCreate
 from backend.app.services.sales_service import sales_service
 from backend.app.services.recovery_service import recovery_service

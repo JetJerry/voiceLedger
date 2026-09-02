@@ -1,5 +1,5 @@
 import pytest
-from backend.app.models import Merchant
+from backend.app.models.legacy import LegacyMerchant as Merchant
 
 
 def test_admin_login_success(client):

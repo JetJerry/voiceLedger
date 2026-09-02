@@ -187,3 +187,8 @@ class MerchantProfile(LegacyBase):
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     merchant = relationship("LegacyMerchant", back_populates="profile")
+
+
+# Explicit legacy aliases
+LegacyPayment = Payment
+LegacyWebhookEvent = WebhookEvent

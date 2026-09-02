@@ -3,9 +3,10 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Import settings and Base
+# Import settings, Base, and canonical models
 from backend.app.config import settings
 from backend.app.db.base import Base
+import backend.app.models  # Ensures all 11 canonical models are registered in Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -3,8 +3,17 @@ import os
 from pathlib import Path
 from sqlalchemy.orm import Session
 from backend.app.db.base import Base
-from backend.app.db.session import engine, SessionLocal
-from backend.app.models import Merchant, Customer, Product, Sale, SaleItem, Payment, WebhookEvent, RecoveryAction
+from backend.app.models.legacy import (
+    LegacyBase,
+    LegacyMerchant as Merchant,
+    Customer,
+    Product,
+    Sale,
+    SaleItem,
+    Payment,
+    WebhookEvent,
+    RecoveryAction,
+)
 
 
 from sqlalchemy import text
@@ -64,14 +73,16 @@ def _migrate_tables(bind_engine):
 
 
 def init_db(db: Session = None) -> None:
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-    _migrate_tables(engine)
-
     close_db = False
     if db is None:
+        from backend.app.db.session import SessionLocal
         db = SessionLocal()
         close_db = True
+
+    bind_engine = db.get_bind()
+    if "sqlite" in str(bind_engine.url):
+        LegacyBase.metadata.create_all(bind=bind_engine)
+        _migrate_tables(bind_engine)
 
     try:
         # Check if primary merchant exists

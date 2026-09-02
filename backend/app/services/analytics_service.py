@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from backend.app.models import Merchant, Product, Sale, SaleItem
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
 from backend.app.services.sales_service import sales_service
 
 import openpyxl

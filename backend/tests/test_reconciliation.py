@@ -108,7 +108,7 @@ def test_idempotent_reconciliation(db_session):
 
 
 def test_payment_reconciliation_db_persistence(db_session):
-    from backend.app.models import Sale, Payment
+    from backend.app.models.legacy import Sale, Payment
     from backend.app.api.dashboard import get_dashboard_summary
 
     # 1. Create a sale

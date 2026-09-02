@@ -2,7 +2,7 @@ import uuid
 from typing import List, Optional, Tuple, Dict, Any
 from sqlalchemy.orm import Session
 from backend.app.config import settings
-from backend.app.models import Merchant, Product, Sale, SaleItem
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
 from backend.app.schemas.sale import SaleCreate
 from backend.app.services.razorpay_service import razorpay_service
 

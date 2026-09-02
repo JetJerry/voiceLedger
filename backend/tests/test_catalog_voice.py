@@ -3,7 +3,7 @@ from unittest.mock import patch
 from backend.app.services.llm_service import llm_service
 from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult, VoiceItemExtracted
 from backend.app.agents.merchant_agent import merchant_agent
-from backend.app.models import Merchant, Product
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product
 
 
 def test_empty_catalog_records_sale_dynamically(db_session):

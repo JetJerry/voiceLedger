@@ -3,7 +3,7 @@ Unit tests for LangGraph state machine workflow and guardrails.
 """
 
 from unittest.mock import patch
-from backend.app.models import Merchant, Product
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product
 from backend.app.schemas.voice import VoiceProcessRequest, VoiceExtractionResult, VoiceItemExtracted
 from backend.app.agentic.graph import run_voiceledger_agent_workflow
 from backend.app.agentic.tools import (

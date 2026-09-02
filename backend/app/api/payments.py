@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Payment, Sale
+from backend.app.models.legacy import Payment, Sale
 from backend.app.schemas.payment import PaymentResponse, PaymentLinkCreate, PaymentLinkResponse
 from backend.app.services.razorpay_service import razorpay_service
 from backend.app.services.reconciliation_service import reconciliation_service

@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.models import Merchant, Sale, Product, MerchantProfile
+from backend.app.models.legacy import LegacyMerchant as Merchant, Sale, Product, MerchantProfile
 from backend.app.schemas.merchant import (
     MerchantCreate,
     MerchantResponse,

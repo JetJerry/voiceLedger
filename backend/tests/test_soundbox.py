@@ -1,5 +1,5 @@
 import pytest
-from backend.app.models import Merchant, Product, Sale, SaleItem
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
 from backend.app.services.reconciliation_service import reconciliation_service
 from backend.app.services.payment_announcement_service import payment_announcement_service
 from backend.app.services.sales_service import sales_service

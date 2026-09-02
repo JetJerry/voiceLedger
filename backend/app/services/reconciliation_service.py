@@ -1,6 +1,6 @@
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from backend.app.models import Sale, Payment, WebhookEvent
+from backend.app.models.legacy import Sale, Payment, WebhookEvent
 
 
 class ReconciliationService:

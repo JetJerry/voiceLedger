@@ -1,5 +1,5 @@
 import pytest
-from backend.app.models import Merchant, Product, Sale, SaleItem
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
 from backend.app.schemas.sale import SaleCreate, SaleItemCreate
 from backend.app.services.sales_service import sales_service
 

@@ -1,5 +1,5 @@
 import pytest
-from backend.app.models import Merchant, Product
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product
 
 
 def test_dynamic_attributes_fruit_seller(client, db_session):

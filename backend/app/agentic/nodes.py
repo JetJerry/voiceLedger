@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from langsmith import traceable
 
 from backend.app.agentic.state import VoiceLedgerState
-from backend.app.models import Merchant, Product, MerchantProfile
+from backend.app.models.legacy import LegacyMerchant as Merchant, Product, MerchantProfile
 from backend.app.services.llm_service import llm_service
 from backend.app.services.sales_service import sales_service
 from backend.app.services.tts_service import tts_service
