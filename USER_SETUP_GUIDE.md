@@ -315,10 +315,18 @@ backend/tests/
 ├── test_phase3_4_webhook_ingestion_and_deduplication.py # WebhookIngestionService, Level 1 (provider, event_id) deduplication, safe concurrency, zero Payment mutations
 ├── test_phase3_5_integration_verification.py # Razorpay end-to-end boundary verification, tampering, adapter flows, and zero Phase 4 leakage
 ├── test_pre_phase4_cleanup.py               # Verification of unmounted conflicting legacy routes (/api/auth, /api/payments, /api/webhooks) and canonical v1 exclusivity
+├── test_phase4_1_payment_core.py            # PaymentService, canonical state machine, Level 2 (provider, provider_payment_id) idempotency, anti-tampering
+├── test_phase4_2_payment_event_processing.py # PaymentEventService, atomic event-to-payment transaction boundary, state updates, linking
+├── test_phase4_3_transactional_outbox.py    # OutboxService, transactional outbox pattern, atomicity, sanitized payload, lifecycle transitions
+├── test_phase4_4_outbox_worker.py           # OutboxWorker, FOR UPDATE SKIP LOCKED, RedisEventPublisher, bounded exponential backoff, DEAD_LETTER, stuck lease recovery
+├── test_phase4_5_end_to_end.py              # Full E2E pipeline, Webhook -> PaymentEvent -> Payment -> OutboxEvent -> OutboxWorker -> Redis, multi-step lifecycle, reconciliation
+├── test_phase5_1_websocket_gateway.py       # Minimal Real-Time WebSocket Gateway (/ws/merchant), JWT auth, tenant isolation, dynamic Redis subscription
+├── test_phase6_1_device_management.py       # Soundbox device registration, one-time secret, SHA-256 token hashes, session auth, heartbeat telemetry
+├── test_phase6_2_device_websocket.py        # Soundbox Device WebSocket Bridge (/ws/device), session token auth, tenant Redis channel, multi-device delivery
 └── (Legacy prototype compatibility tests)   # Isolated Kirana voice & sales tests
 ```
 
-**Status**: 304 canonical VoiceLedger tests passed with 100% success. Conflicting legacy financial/auth routes (`/api/auth`, `/api/payments`, `/api/webhooks`) are cleanly unmounted from production `main.py`.
+**Status**: 418 canonical VoiceLedger tests passed with 100% success (0 regressions, 0 failures).
 
 ---
 

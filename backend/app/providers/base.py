@@ -71,3 +71,31 @@ class PaymentProvider(ABC):
         NormalizedPaymentEvent structure for Level 1 idempotency processing.
         """
         pass
+
+
+# Global provider registry mapping uppercase provider names to adapter instances
+_PROVIDER_REGISTRY: Dict[str, PaymentProvider] = {}
+
+
+def register_provider(provider: PaymentProvider) -> None:
+    """Register a concrete PaymentProvider instance in the global registry."""
+    _PROVIDER_REGISTRY[provider.provider_name.upper()] = provider
+
+
+def get_provider(provider_name: str) -> PaymentProvider:
+    """
+    Retrieve a registered PaymentProvider adapter by name.
+
+    Raises:
+        ProviderResourceNotFoundError: If the provider is not registered.
+    """
+    from backend.app.providers.exceptions import ProviderResourceNotFoundError
+
+    name = (provider_name or "").upper().strip()
+    provider = _PROVIDER_REGISTRY.get(name)
+    if not provider:
+        raise ProviderResourceNotFoundError(
+            f"Payment provider '{provider_name}' is not registered",
+            provider=provider_name,
+        )
+    return provider

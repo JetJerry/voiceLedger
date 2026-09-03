@@ -135,9 +135,13 @@ app.include_router(admin_router, prefix=settings.API_V1_STR)
 from backend.app.api.v1.auth import router as auth_v1_router
 from backend.app.api.v1.merchants import router as merchants_v1_router
 from backend.app.api.v1.webhooks import router as webhooks_v1_router
+from backend.app.api.v1.devices import router as devices_v1_router
+from backend.app.api.v1.websocket import router as ws_v1_router
 app.include_router(auth_v1_router, prefix="/api/v1")
 app.include_router(merchants_v1_router, prefix="/api/v1")
 app.include_router(webhooks_v1_router, prefix="/api/v1")
+app.include_router(devices_v1_router, prefix="/api/v1")
+app.include_router(ws_v1_router)
 
 
 # Frontend Static Files Mount (for local monolithic runs if built)

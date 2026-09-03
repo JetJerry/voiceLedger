@@ -29,7 +29,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     container_name: voiceledger-worker
-    command: ["python", "-c", "import time; print('VoiceLedger background worker placeholder running...'); time.sleep(86400)"]
+    command: ["python", "-m", "backend.app.worker"]
     environment:
       - APP_ENV=development
       - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/voiceledger
