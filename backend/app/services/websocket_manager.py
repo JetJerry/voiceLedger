@@ -63,6 +63,8 @@ class MerchantConnectionManager:
 
     def __init__(self, redis_client_override: Optional[Any] = None):
         self._connections: Dict[uuid.UUID, Set[WebSocket]] = defaultdict(set)
+        self._device_connections: Dict[uuid.UUID, WebSocket] = {}
+        self._ws_to_device: Dict[WebSocket, uuid.UUID] = {}
         self._redis_tasks: Dict[uuid.UUID, asyncio.Task] = {}
         self._lock = asyncio.Lock()
         self._redis_client_override = redis_client_override
@@ -72,14 +74,23 @@ class MerchantConnectionManager:
             return self._redis_client_override
         return await get_redis_client()
 
-    async def connect(self, merchant_id: uuid.UUID, websocket: WebSocket) -> None:
+    async def connect(
+        self,
+        merchant_id: uuid.UUID,
+        websocket: WebSocket,
+        device_id: Optional[uuid.UUID] = None,
+    ) -> None:
         """Register an authenticated, accepted WebSocket connection under a merchant."""
         async with self._lock:
             self._connections[merchant_id].add(websocket)
+            if device_id is not None:
+                self._device_connections[device_id] = websocket
+                self._ws_to_device[websocket] = device_id
             logger.info(
-                "Merchant %s client connected (active clients: %d)",
+                "Merchant %s client connected (active clients: %d, device: %s)",
                 merchant_id,
                 len(self._connections[merchant_id]),
+                device_id,
             )
             # Start Redis listener task if this is the first client for this merchant
             if merchant_id not in self._redis_tasks or self._redis_tasks[merchant_id].done():
@@ -90,6 +101,10 @@ class MerchantConnectionManager:
     async def disconnect(self, merchant_id: uuid.UUID, websocket: WebSocket) -> None:
         """Unregister a disconnected WebSocket and stop Redis listener if no clients remain."""
         async with self._lock:
+            if websocket in self._ws_to_device:
+                dev_id = self._ws_to_device.pop(websocket)
+                self._device_connections.pop(dev_id, None)
+
             if merchant_id in self._connections:
                 self._connections[merchant_id].discard(websocket)
                 remaining = len(self._connections[merchant_id])
@@ -101,6 +116,28 @@ class MerchantConnectionManager:
                     if task and not task.done():
                         task.cancel()
                         logger.info("Stopped Redis listener for idle merchant %s", merchant_id)
+
+    async def send_to_device(self, device_id: uuid.UUID, message: Dict[str, Any]) -> bool:
+        """
+        Send a message directly to a targeted Soundbox device WebSocket.
+        Returns True if delivered, False if the device is offline or send failed.
+        """
+        async with self._lock:
+            ws = self._device_connections.get(device_id)
+
+        if ws is None:
+            return False
+
+        try:
+            await ws.send_json(message)
+            return True
+        except Exception as exc:
+            logger.warning("Failed sending message to device %s: %s", device_id, exc)
+            return False
+
+    def is_device_connected(self, device_id: uuid.UUID) -> bool:
+        """Check if a specific Soundbox device currently maintains an active connection."""
+        return device_id in self._device_connections
 
     async def broadcast_to_merchant(self, merchant_id: uuid.UUID, message: Dict[str, Any]) -> int:
         """

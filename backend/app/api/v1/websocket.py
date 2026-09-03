@@ -16,6 +16,7 @@ Security & Invariants:
    closed before the persistent connection loop begins.
 5. Zero Financial Mutation: Cannot mutate payments, events, or balances.
 """
+import json
 import logging
 from typing import Optional
 import uuid
@@ -38,6 +39,11 @@ from backend.app.services.device_service import (
     DeviceInactiveError,
     DeviceSessionInvalidError,
     DeviceNotFoundError,
+)
+from backend.app.services.voice_notification_service import (
+    voice_notification_service,
+    VoiceNotificationNotFoundError,
+    VoiceNotificationForbiddenError,
 )
 
 logger = logging.getLogger("voiceledger.websocket.endpoint")
@@ -273,16 +279,74 @@ async def device_websocket_endpoint(
     finally:
         db.close()
 
-    # Accept connection and register under the merchant
+    # Accept connection and register under the merchant with device_id
     await websocket.accept()
-    await merchant_ws_manager.connect(target_merchant_id, websocket)
+    await merchant_ws_manager.connect(target_merchant_id, websocket, device_id=device_id)
     logger.info("Device %s connected for merchant %s", device_id, target_merchant_id)
+
+    # Replay any pending unacknowledged voice notifications for this reconnecting device
+    db_replay: Session = SessionLocal()
+    try:
+        replayed = await voice_notification_service.replay_pending_notifications_for_device(
+            db=db_replay,
+            device_id=device_id,
+        )
+        if replayed > 0:
+            logger.info("Replayed %d pending voice notifications for device %s", replayed, device_id)
+    except Exception as exc:
+        logger.error("Error during offline replay for device %s: %s", device_id, exc)
+    finally:
+        db_replay.close()
 
     try:
         while True:
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
+                continue
+
+            try:
+                msg = json.loads(data)
+            except Exception:
+                continue
+
+            if isinstance(msg, dict) and msg.get("type") == "playback_ack":
+                notif_id_str = msg.get("notification_id")
+                ack_status = msg.get("status", "PLAYED")
+                if not notif_id_str:
+                    await websocket.send_json({"type": "error", "detail": "Missing notification_id"})
+                    continue
+
+                try:
+                    notif_uuid = uuid.UUID(str(notif_id_str))
+                except (ValueError, TypeError):
+                    await websocket.send_json({"type": "error", "detail": "Invalid notification_id format"})
+                    continue
+
+                db_sess: Session = SessionLocal()
+                try:
+                    updated = voice_notification_service.record_playback_ack(
+                        db=db_sess,
+                        device_id=device_id,
+                        notification_id=notif_uuid,
+                        ack_status=ack_status,
+                        error_detail=msg.get("error"),
+                    )
+                    await websocket.send_json({
+                        "type": "playback_ack_response",
+                        "notification_id": str(updated.id),
+                        "status": updated.status,
+                    })
+                except VoiceNotificationForbiddenError as exc:
+                    await websocket.send_json({"type": "error", "detail": str(exc)})
+                except VoiceNotificationNotFoundError as exc:
+                    await websocket.send_json({"type": "error", "detail": str(exc)})
+                except Exception as exc:
+                    logger.error("Error processing playback ACK from device %s: %s", device_id, exc)
+                    await websocket.send_json({"type": "error", "detail": "Failed to process playback ACK"})
+                finally:
+                    db_sess.close()
+
     except WebSocketDisconnect:
         logger.info("Device %s disconnected normally", device_id)
     except Exception as exc:

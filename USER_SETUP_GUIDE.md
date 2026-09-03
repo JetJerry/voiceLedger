@@ -323,10 +323,13 @@ backend/tests/
 ├── test_phase5_1_websocket_gateway.py       # Minimal Real-Time WebSocket Gateway (/ws/merchant), JWT auth, tenant isolation, dynamic Redis subscription
 ├── test_phase6_1_device_management.py       # Soundbox device registration, one-time secret, SHA-256 token hashes, session auth, heartbeat telemetry
 ├── test_phase6_2_device_websocket.py        # Soundbox Device WebSocket Bridge (/ws/device), session token auth, tenant Redis channel, multi-device delivery
+├── test_phase7_1_voice_notification.py       # Localized voice notifications, deterministic phrase & currency formatting, TTSProvider abstraction, failure isolation
+├── test_phase7_2_audio_playback.py           # Soundbox audio streaming over WebSocket, base64 payload, device targeting, playback ACK lifecycle, idempotency
+├── test_phase8_1_offline_replay.py           # Offline notification queuing, deterministic oldest-first replay upon device reconnect, duplicate in-flight protection
 └── (Legacy prototype compatibility tests)   # Isolated Kirana voice & sales tests
 ```
 
-**Status**: 418 canonical VoiceLedger tests passed with 100% success (0 regressions, 0 failures).
+**Status**: 450 canonical VoiceLedger tests passed with 100% success (0 regressions, 0 failures).
 
 ---
 
