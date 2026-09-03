@@ -326,10 +326,11 @@ backend/tests/
 ├── test_phase7_1_voice_notification.py       # Localized voice notifications, deterministic phrase & currency formatting, TTSProvider abstraction, failure isolation
 ├── test_phase7_2_audio_playback.py           # Soundbox audio streaming over WebSocket, base64 payload, device targeting, playback ACK lifecycle, idempotency
 ├── test_phase8_1_offline_replay.py           # Offline notification queuing, deterministic oldest-first replay upon device reconnect, duplicate in-flight protection
+├── test_phase9_1_end_to_end_release.py       # Full system verification: Webhook -> Payment -> Outbox -> Worker -> Redis -> Voice -> WebSocket -> Soundbox -> ACK -> DELIVERED
 └── (Legacy prototype compatibility tests)   # Isolated Kirana voice & sales tests
 ```
 
-**Status**: 450 canonical VoiceLedger tests passed with 100% success (0 regressions, 0 failures).
+**Status**: 459 canonical VoiceLedger tests passed with 100% success (0 regressions, 0 failures).
 
 ---
 
@@ -392,3 +393,66 @@ Merchants can query payment arrival at any moment:
 The system checks authoritative ledger state and returns an immediate audible voice answer:
 * *"Haan! Rs. 60 payment receive ho chuka hai (PAID ✅)."*
 * *"Nahi, payment abhi tak nahi aaya hai (PENDING ⏳)."*
+
+---
+
+## 12. Buildathon Demo Walkthrough (Step-by-Step)
+
+Follow these exact steps to demonstrate VoiceLedger to judges or evaluators:
+
+### 1. Start Infrastructure:
+```bash
+docker compose up -d postgres redis
+```
+Verify PostgreSQL is healthy on `localhost:5432` and Redis on `localhost:6379`.
+
+### 2. Configure Environment:
+Copy `.env.example` to `.env` (if not already present):
+```ini
+APP_ENV=development
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/voiceledger
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET=voiceledger_jwt_signing_secret_dev_environment_key_2026_min_32
+RAZORPAY_KEY_ID=rzp_test_TW8NzkX053cgZH
+RAZORPAY_KEY_SECRET=u1aZqpcDoWbrNdYMVHDz3Z3M
+RAZORPAY_WEBHOOK_SECRET=razorpay_webhook_secret_2026_test_8x7k2p
+```
+
+### 3. Verify Database Migrations:
+```bash
+uv run alembic -c backend/alembic.ini current
+```
+Output must show `0002_user_sessions (head)`.
+
+### 4. Start Application & Worker:
+Terminal 1 (API Server):
+```bash
+uv run uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
+Terminal 2 (Outbox Worker):
+```bash
+uv run python -m backend.app.worker
+```
+
+### 5. Automated Full-Pipeline Smoke Test:
+To immediately verify the complete online payment flow, offline replay sync, and idempotency:
+```bash
+uv run python -m backend.scripts.live_demo_smoke
+```
+
+### 6. Live Razorpay Test Mode Webhook Integration (Optional Public Tunnel):
+1. Start an HTTPS tunnel (using any of these zero-install options):
+   - **Option A (LocalTunnel via npx — Pure JS, no .exe)**:
+     ```bash
+     npx localtunnel --port 8000
+     ```
+   - **Option B (Native Windows OpenSSH — No npm/download needed)**:
+     ```bash
+     ssh -R 80:localhost:8000 nokey@localhost.run
+     ```
+2. In Razorpay Dashboard (**Settings → Webhooks**):
+   - **URL**: `https://<your-tunnel-domain>/api/v1/webhooks/razorpay`
+   - **Secret**: Value of `RAZORPAY_WEBHOOK_SECRET`
+   - **Active Events**: `payment.captured`
+3. Make a test payment via UPI / Card in Razorpay Test Mode.
+4. Observe the payment state machine commit to `CAPTURED`, the Outbox publish to Redis, the Voice Notification synthesis, and the real-time audio playback over the Soundbox WebSocket.
