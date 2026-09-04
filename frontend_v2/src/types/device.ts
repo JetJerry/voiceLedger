@@ -60,3 +60,10 @@ export interface PlaybackAckResponse {
   notification_id: string;
   status: string;
 }
+
+export interface DeviceHeartbeatResponse {
+  status: string;
+  device_id: string;
+  device_status: string;
+  last_seen_at: string;
+}

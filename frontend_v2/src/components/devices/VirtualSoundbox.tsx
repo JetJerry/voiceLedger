@@ -9,6 +9,7 @@ import {
   Speaker,
   Play,
   Terminal,
+  Activity,
 } from 'lucide-react';
 import { useSoundbox } from '../../hooks/useSoundbox';
 import { formatTimestamp } from '../../services/websocketParser';
@@ -38,6 +39,7 @@ export const VirtualSoundbox: React.FC<VirtualSoundboxProps> = ({
     connectDevice,
     disconnectDevice,
     testSpeakerTone,
+    sendHeartbeat,
   } = useSoundbox();
 
   const [inputDeviceId, setInputDeviceId] = useState(initialDeviceId);
@@ -45,6 +47,7 @@ export const VirtualSoundbox: React.FC<VirtualSoundboxProps> = ({
   const [inputSecret, setInputSecret] = useState(initialSecret);
   const [connecting, setConnecting] = useState(false);
   const [connError, setConnError] = useState<string | null>(null);
+  const [heartbeatLoading, setHeartbeatLoading] = useState(false);
 
   const isOnline = state === 'ONLINE' || state === 'PLAYING';
   const isPlaying = state === 'PLAYING';
@@ -319,6 +322,26 @@ export const VirtualSoundbox: React.FC<VirtualSoundboxProps> = ({
               <span>Speaker Test</span>
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={heartbeatLoading}
+            onClick={async () => {
+              setHeartbeatLoading(true);
+              try {
+                await sendHeartbeat();
+              } catch (e) {
+                // Handled in context logs
+              } finally {
+                setHeartbeatLoading(false);
+              }
+            }}
+            className="w-full py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-400 text-2xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+            title="Send live hardware heartbeat to update server telemetry (/api/v1/devices/{id}/heartbeat)"
+          >
+            <Activity className={`w-3 h-3 ${heartbeatLoading ? 'animate-spin' : 'text-emerald-400'}`} />
+            <span>{heartbeatLoading ? 'Sending Heartbeat...' : 'Send Hardware Heartbeat Ping'}</span>
+          </button>
 
           {!audioUnlocked && (
             <button

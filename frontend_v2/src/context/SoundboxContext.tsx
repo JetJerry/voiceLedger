@@ -1,5 +1,5 @@
 import React, { createContext, useState, useRef, useCallback, ReactNode, useEffect } from 'react';
-import { authenticateDeviceApi } from '../api/devices';
+import { authenticateDeviceApi, sendDeviceHeartbeatApi } from '../api/devices';
 import {
   VoiceNotificationPayload,
   PlaybackAck,
@@ -25,6 +25,7 @@ export interface SoundboxContextType {
   connectDevice: (deviceId: string, deviceName: string, deviceSecret: string) => Promise<void>;
   disconnectDevice: () => void;
   testSpeakerTone: () => void;
+  sendHeartbeat: () => Promise<any>;
 }
 
 export const SoundboxContext = createContext<SoundboxContextType | undefined>(undefined);
@@ -319,6 +320,21 @@ export const SoundboxProvider: React.FC<{ children: ReactNode }> = ({ children }
     setIsMuted((prev) => !prev);
   };
 
+  const sendHeartbeat = useCallback(async () => {
+    if (!activeDeviceId || !sessionToken) {
+      addLog('connection', 'Heartbeat Skipped', 'Device not authenticated or session token missing', 'warning');
+      throw new Error('Device not connected. Connect simulator first.');
+    }
+    try {
+      const res = await sendDeviceHeartbeatApi(activeDeviceId, sessionToken);
+      addLog('system', 'Heartbeat Recorded', `Server acknowledged heartbeat (${res.device_status})`, 'success');
+      return res;
+    } catch (err: any) {
+      addLog('system', 'Heartbeat Failed', err.message || 'Server rejected heartbeat', 'error');
+      throw err;
+    }
+  }, [activeDeviceId, sessionToken]);
+
   useEffect(() => {
     return () => {
       cleanupSocket();
@@ -342,6 +358,7 @@ export const SoundboxProvider: React.FC<{ children: ReactNode }> = ({ children }
         connectDevice,
         disconnectDevice,
         testSpeakerTone,
+        sendHeartbeat,
       }}
     >
       {children}

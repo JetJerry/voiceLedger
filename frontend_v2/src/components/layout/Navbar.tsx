@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Volume2, Activity, Speaker, Cpu, LogOut, Store, Shield } from 'lucide-react';
+import { Volume2, Activity, Speaker, Cpu, LogOut, Store, Shield, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
+import { UserProfileModal } from '../common/UserProfileModal';
+import { HealthDiagnosticModal } from '../common/HealthDiagnosticModal';
 
 export const Navbar: React.FC = () => {
   const { user, merchant, logout } = useAuth();
   const navigate = useNavigate();
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState<boolean>(false);
+  const [isHealthModalOpen, setIsHealthModalOpen] = useState<boolean>(false);
 
   const handleLogout = async () => {
     await logout();
@@ -80,16 +84,38 @@ export const Navbar: React.FC = () => {
             </NavLink>
           </nav>
 
-          {/* Right: User Profile & Logout */}
+          {/* Right: System Health, User Profile & Logout */}
           <div className="flex items-center gap-3">
-            <div className="hidden lg:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-800">
-                {user?.full_name || user?.email || 'Merchant User'}
-              </span>
-              <span className="text-2xs text-slate-400 font-mono truncate max-w-[180px]">
-                {user?.email}
-              </span>
-            </div>
+            {/* Live Health Probe Button */}
+            <button
+              type="button"
+              onClick={() => setIsHealthModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-2xs font-semibold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition-colors shadow-2xs"
+              title="Inspect Live System Health & Latency"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="hidden md:inline">API Online</span>
+            </button>
+
+            {/* Clickable User Profile Badge */}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-xl transition-colors text-right border border-transparent hover:border-slate-200"
+              title="Click to view full user account profile (/api/v1/auth/me)"
+            >
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                <UserIcon className="w-3.5 h-3.5" />
+              </div>
+              <div className="hidden lg:flex flex-col text-left">
+                <span className="text-xs font-semibold text-slate-800 truncate max-w-[140px]">
+                  {user?.full_name || user?.email || 'Merchant User'}
+                </span>
+                <span className="text-3xs text-slate-400 font-mono truncate max-w-[140px]">
+                  {user?.email}
+                </span>
+              </div>
+            </button>
 
             <button
               onClick={handleLogout}
@@ -140,6 +166,16 @@ export const Navbar: React.FC = () => {
           <span>Architecture</span>
         </NavLink>
       </div>
+
+      {/* Modals */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+      <HealthDiagnosticModal
+        isOpen={isHealthModalOpen}
+        onClose={() => setIsHealthModalOpen(false)}
+      />
     </header>
   );
 };

@@ -23,18 +23,21 @@ export function getAccessToken(): string | null {
 
 export function setTokens(accessToken: string, refreshToken?: string): void {
   inMemoryAccessToken = accessToken;
-  if (refreshToken) {
+  if (refreshToken && typeof localStorage !== 'undefined') {
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
 }
 
 export function getStoredRefreshToken(): string | null {
+  if (typeof localStorage === 'undefined') return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
 export function clearTokens(): void {
   inMemoryAccessToken = null;
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 }
 
 export interface RequestOptions extends RequestInit {

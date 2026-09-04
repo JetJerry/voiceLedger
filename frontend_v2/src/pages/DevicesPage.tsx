@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { listDevicesApi } from '../api/devices';
 import { Device, DeviceRegisterResponse } from '../types/device';
 import { RegisterDeviceModal } from '../components/devices/RegisterDeviceModal';
+import { DeviceDetailModal } from '../components/devices/DeviceDetailModal';
 import { VirtualSoundbox } from '../components/devices/VirtualSoundbox';
 import { useSoundbox } from '../hooks/useSoundbox';
 import {
@@ -20,12 +21,14 @@ import { formatTimestamp } from '../services/websocketParser';
 export const DevicesPage: React.FC = () => {
   const navigate = useNavigate();
   const { merchant } = useAuth();
-  const { connectDevice } = useSoundbox();
+  const { connectDevice, sessionToken } = useSoundbox();
 
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [auditDevice, setAuditDevice] = useState<Device | null>(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState<boolean>(false);
 
   // Auto-fill props for the simulator
   const [simDeviceId, setSimDeviceId] = useState<string>('');
@@ -205,7 +208,18 @@ export const DevicesPage: React.FC = () => {
                             {d.last_seen_at ? formatTimestamp(d.last_seen_at) : 'Never'}
                           </td>
 
-                          <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                          <td className="px-6 py-3.5 whitespace-nowrap text-right space-x-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuditDevice(d);
+                                setIsAuditModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-2xs font-semibold rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 transition-colors shadow-2xs"
+                              title="Audit verified PostgreSQL record (/api/v1/merchants/devices/{id})"
+                            >
+                              Audit Record
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleSelectForSimulator(d)}
@@ -263,6 +277,14 @@ export const DevicesPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         merchantId={merchant?.id || ''}
         onDeviceRegistered={handleDeviceRegistered}
+      />
+
+      {/* Modal for Device Audit Record */}
+      <DeviceDetailModal
+        device={auditDevice}
+        sessionId={sessionToken || undefined}
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
       />
     </div>
   );

@@ -2,10 +2,20 @@ import { apiClient, setTokens, clearTokens, getStoredRefreshToken } from './clie
 import {
   UserLoginRequest,
   UserLoginResponse,
+  UserRegisterRequest,
+  UserRegisterResponse,
   TokenRefreshResponse,
   LogoutResponse,
   User,
 } from '../types/auth';
+
+export async function registerApi(data: UserRegisterRequest): Promise<UserRegisterResponse> {
+  return apiClient.post<UserRegisterResponse>(
+    '/api/v1/auth/register',
+    data,
+    { requiresAuth: false }
+  );
+}
 
 export async function loginApi(credentials: UserLoginRequest): Promise<UserLoginResponse> {
   const response = await apiClient.post<UserLoginResponse>(

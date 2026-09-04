@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, UserLoginRequest } from '../types/auth';
+import { User, UserLoginRequest, UserRegisterRequest, UserRegisterResponse } from '../types/auth';
 import { MerchantContext } from '../types/merchant';
-import { loginApi, logoutApi, getMeApi, refreshTokenApi } from '../api/auth';
+import { loginApi, registerApi, logoutApi, getMeApi, refreshTokenApi } from '../api/auth';
 import { getMerchantContextApi } from '../api/merchants';
 import { getStoredRefreshToken, getAccessToken, clearTokens } from '../api/client';
 
@@ -12,6 +12,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: UserLoginRequest) => Promise<void>;
+  register: (data: UserRegisterRequest) => Promise<UserRegisterResponse>;
   logout: () => Promise<void>;
   refreshMerchantContext: () => Promise<void>;
 }
@@ -109,6 +110,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const register = async (data: UserRegisterRequest): Promise<UserRegisterResponse> => {
+    setIsLoading(true);
+    try {
+      const regRes = await registerApi(data);
+      return regRes;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -133,6 +144,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: Boolean(user && accessToken),
         isLoading,
         login,
+        register,
         logout,
         refreshMerchantContext: fetchMerchantContext,
       }}

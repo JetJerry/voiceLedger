@@ -23,3 +23,33 @@ export async function checkDeviceAccessApi(deviceId: string): Promise<ResourceAc
     requiresAuth: true,
   });
 }
+
+export async function checkDeviceSessionAccessApi(sessionId: string): Promise<ResourceAccessResponse> {
+  return apiClient.get<ResourceAccessResponse>(`/api/v1/merchants/device-sessions/${sessionId}`, {
+    requiresAuth: true,
+  });
+}
+
+export interface RbacTestResponse {
+  message: string;
+  role: string;
+  merchant_id: string;
+}
+
+export async function testOwnerRoleApi(): Promise<RbacTestResponse> {
+  return apiClient.get<RbacTestResponse>('/api/v1/merchants/owner-only', {
+    requiresAuth: true,
+  });
+}
+
+export async function testAdminRoleApi(): Promise<RbacTestResponse> {
+  return apiClient.get<RbacTestResponse>('/api/v1/merchants/admin-only', {
+    requiresAuth: true,
+  });
+}
+
+export async function testStaffRoleApi(): Promise<RbacTestResponse> {
+  return apiClient.get<RbacTestResponse>('/api/v1/merchants/staff-accessible', {
+    requiresAuth: true,
+  });
+}

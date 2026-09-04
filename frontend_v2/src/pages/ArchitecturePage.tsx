@@ -20,6 +20,7 @@ import {
   FileCode,
   Sparkles,
 } from 'lucide-react';
+import { RbacDiagnosticPanel } from '../components/architecture/RbacDiagnosticPanel';
 
 interface PipelineStage {
   id: number;
@@ -544,6 +545,9 @@ export const ArchitecturePage: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Interactive Multi-Tenant RBAC Diagnostic Console */}
+      <RbacDiagnosticPanel />
 
       {/* Judge Presentation Action Strip */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 sm:p-8 text-white shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-6">

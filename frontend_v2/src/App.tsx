@@ -6,6 +6,7 @@ import { SoundboxProvider } from './context/SoundboxContext';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DevicesPage } from './pages/DevicesPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
@@ -17,8 +18,9 @@ export const App: React.FC = () => {
         <SoundboxProvider>
           <BrowserRouter>
             <Routes>
-              {/* Public Authentication Route */}
+              {/* Public Authentication Routes */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
               {/* Protected Merchant Application Routes */}
               <Route

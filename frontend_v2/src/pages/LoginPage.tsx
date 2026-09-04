@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Volume2, ShieldCheck, Lock, Mail, ArrowRight, Sparkles, AlertCircle, Server } from 'lucide-react';
 import { getHealthApi } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
@@ -130,11 +130,19 @@ export const LoginPage: React.FC = () => {
       {/* Main Login Card */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
         <div className="bg-white py-8 px-6 shadow-sm border border-slate-200 rounded-2xl sm:px-10">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">Merchant Portal Access</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Sign in to monitor live payments and manage connected Soundbox devices.
-            </p>
+          <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Merchant Portal Access</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Sign in to monitor live payments & soundboxes.
+              </p>
+            </div>
+            <Link
+              to="/register"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline shrink-0"
+            >
+              Register →
+            </Link>
           </div>
 
           {/* Quick-Fill Demo Helper */}
@@ -222,6 +230,14 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Registration Link */}
+          <div className="mt-4 text-center">
+            <span className="text-xs text-slate-500">Need a new merchant account? </span>
+            <Link to="/register" className="text-xs font-semibold text-blue-600 hover:underline">
+              Create Account
+            </Link>
+          </div>
 
           {/* Security & Verification Callout */}
           <div className="mt-6 pt-5 border-t border-slate-100 text-xs text-slate-500 flex items-center justify-center gap-2">

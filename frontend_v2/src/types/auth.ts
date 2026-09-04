@@ -5,6 +5,17 @@ export interface User {
   is_active: boolean;
   created_at?: string;
 }
+export interface UserRegisterRequest {
+  email: string;
+  password: string;
+  full_name?: string;
+}
+
+export interface UserRegisterResponse {
+  success: boolean;
+  message: string;
+  user: User;
+}
 
 export interface UserLoginRequest {
   email: string;

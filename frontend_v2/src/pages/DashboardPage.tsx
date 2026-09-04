@@ -7,6 +7,8 @@ import { ConnectionBadge } from '../components/dashboard/ConnectionBadge';
 import { LivePaymentHero } from '../components/dashboard/LivePaymentHero';
 import { PaymentFeedTable } from '../components/dashboard/PaymentFeedTable';
 import { ActivityFeed } from '../components/dashboard/ActivityFeed';
+import { PaymentDetailDrawer } from '../components/dashboard/PaymentDetailDrawer';
+import { MerchantPaymentEvent } from '../types/websocket';
 import {
   Activity,
   Server,
@@ -20,12 +22,15 @@ import {
   Trash2,
   Speaker,
   Cpu,
+  AlertCircle,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { merchant } = useAuth();
+  const { merchant, user, logout } = useAuth();
   const { payments, latestPayment, activityLogs, clearEvents } = useMerchantEvents();
+  const [selectedPaymentForDrawer, setSelectedPaymentForDrawer] = useState<MerchantPaymentEvent | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
   const [health, setHealth] = useState<{
     status: string;
@@ -58,6 +63,31 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Unassigned Merchant Notice for newly registered users */}
+      {!merchant && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <span className="font-bold block">Individual User Account: {user?.full_name || user?.email}</span>
+              <p className="text-2xs text-amber-800 mt-0.5 leading-relaxed">
+                Your user account is registered. To test live webhook events and soundbox playback, switch to the pre-configured Demo Store.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-amber-300 text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors shadow-2xs"
+          >
+            Switch to Demo Store
+          </button>
+        </div>
+      )}
+
       {/* Top Banner: Merchant Identity & Live Connection Badge */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
@@ -172,12 +202,25 @@ export const DashboardPage: React.FC = () => {
       {latestPayment ? (
         <div className="space-y-6">
           {/* Latest Payment Hero Card */}
-          <LivePaymentHero payment={latestPayment} />
+          <LivePaymentHero
+            payment={latestPayment}
+            onInspectRecord={(p) => {
+              setSelectedPaymentForDrawer(p);
+              setIsDrawerOpen(true);
+            }}
+          />
 
           {/* Grid: Payment Feed Table & Compact Activity Stream */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8">
-              <PaymentFeedTable payments={payments} />
+              <PaymentFeedTable
+                payments={payments}
+                selectedPaymentId={selectedPaymentForDrawer?.id}
+                onSelectPayment={(p) => {
+                  setSelectedPaymentForDrawer(p);
+                  setIsDrawerOpen(true);
+                }}
+              />
             </div>
             <div className="lg:col-span-4">
               <ActivityFeed logs={activityLogs} />
@@ -253,6 +296,13 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Payment Detail Drawer */}
+      <PaymentDetailDrawer
+        payment={selectedPaymentForDrawer}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 };

@@ -7,15 +7,17 @@ import {
   ShieldCheck,
   Zap,
   ArrowRight,
+  Database,
 } from 'lucide-react';
 import { MerchantPaymentEvent } from '../../types/websocket';
 import { formatCurrency, formatTimestamp } from '../../services/websocketParser';
 
 interface LivePaymentHeroProps {
   payment: MerchantPaymentEvent;
+  onInspectRecord?: (payment: MerchantPaymentEvent) => void;
 }
 
-export const LivePaymentHero: React.FC<LivePaymentHeroProps> = ({ payment }) => {
+export const LivePaymentHero: React.FC<LivePaymentHeroProps> = ({ payment, onInspectRecord }) => {
   const navigate = useNavigate();
   const isCaptured = payment.status.toUpperCase() === 'CAPTURED';
 
@@ -125,19 +127,32 @@ export const LivePaymentHero: React.FC<LivePaymentHeroProps> = ({ payment }) => 
           </div>
 
           {/* Soundbox Announcement Banner */}
-          <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between">
+          <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-indigo-700">
               <Speaker className="w-4 h-4 animate-pulse text-indigo-600" />
               <span>Voice Announcement Dispatched</span>
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/devices')}
-              className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200"
-            >
-              <span>View Simulator</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
+            <div className="flex items-center gap-2">
+              {onInspectRecord && (
+                <button
+                  type="button"
+                  onClick={() => onInspectRecord(payment)}
+                  className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                  title="Audit verified PostgreSQL record (/api/v1/merchants/payments/{id})"
+                >
+                  <Database className="w-3 h-3" />
+                  <span>Audit Record</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate('/devices')}
+                className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-1 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200"
+              >
+                <span>View Simulator</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
