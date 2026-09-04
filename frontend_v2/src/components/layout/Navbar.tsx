@@ -102,6 +102,44 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Sub-Navigation Bar */}
+      <div className="sm:hidden border-t border-slate-100 px-3 py-1.5 flex items-center justify-around bg-slate-50">
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `inline-flex items-center gap-1 px-2.5 py-1 text-2xs font-semibold rounded-md ${
+              isActive ? 'bg-blue-100 text-blue-800' : 'text-slate-600'
+            }`
+          }
+        >
+          <Activity className="w-3 h-3 text-emerald-600" />
+          <span>Live Ops</span>
+        </NavLink>
+        <NavLink
+          to="/devices"
+          className={({ isActive }) =>
+            `inline-flex items-center gap-1 px-2.5 py-1 text-2xs font-semibold rounded-md ${
+              isActive ? 'bg-blue-100 text-blue-800' : 'text-slate-600'
+            }`
+          }
+        >
+          <Speaker className="w-3 h-3 text-indigo-600" />
+          <span>Soundboxes</span>
+        </NavLink>
+        <NavLink
+          to="/architecture"
+          className={({ isActive }) =>
+            `inline-flex items-center gap-1 px-2.5 py-1 text-2xs font-semibold rounded-md ${
+              isActive ? 'bg-blue-100 text-blue-800' : 'text-slate-600'
+            }`
+          }
+        >
+          <Cpu className="w-3 h-3 text-amber-600" />
+          <span>Architecture</span>
+        </NavLink>
+      </div>
     </header>
   );
 };
