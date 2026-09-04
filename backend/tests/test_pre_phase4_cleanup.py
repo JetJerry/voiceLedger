@@ -172,3 +172,57 @@ def test_canonical_model_exports_only():
     assert not hasattr(models, "RecoveryAction")
     assert not hasattr(models, "MerchantProfile")
     assert not hasattr(models, "WebhookEvent")
+
+
+def test_legacy_prototype_routers_are_unmounted(client):
+    """Verify legacy prototype routers (/api/voice, /api/sales, /api/recovery, /api/dashboard, /api/admin) return 404."""
+    # Voice router
+    assert client.post("/api/voice/process-intent", json={}).status_code == 404
+    # Sales router
+    assert client.get("/api/sales").status_code == 404
+    assert client.post("/api/sales", json={}).status_code == 404
+    # Recovery router
+    assert client.get("/api/recovery/pending").status_code == 404
+    # Dashboard router
+    assert client.get("/api/dashboard/stats").status_code == 404
+    # Admin router
+    assert client.get("/api/admin/merchants").status_code == 404
+
+
+def test_fastapi_app_import_isolation():
+    """Verify importing the FastAPI application does not load openpyxl or legacy sales/analytics modules."""
+    import sys
+    import subprocess
+    import importlib
+
+    # 1. Clean subprocess check: importing backend.app.main in a fresh process does not load openpyxl
+    cmd = [
+        sys.executable,
+        "-c",
+        (
+            "import sys\n"
+            "from backend.app.main import app\n"
+            "assert 'openpyxl' not in sys.modules, 'openpyxl must not be loaded'\n"
+            "assert 'backend.app.api.sales' not in sys.modules, 'sales router must not be loaded'\n"
+            "assert 'backend.app.services.analytics_service' not in sys.modules, 'analytics_service must not be loaded'\n"
+            "assert app is not None\n"
+        ),
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 0, f"Importing backend.app.main in clean process failed:\n{res.stderr}"
+
+    # 2. In-process check: even if openpyxl is blocked (simulating ModuleNotFoundError),
+    # reloading or importing backend.app.main succeeds without error
+    orig_openpyxl = sys.modules.get("openpyxl")
+    sys.modules["openpyxl"] = None
+    try:
+        import backend.app.main
+        importlib.reload(backend.app.main)
+        assert backend.app.main.app is not None
+    finally:
+        if orig_openpyxl is not None:
+            sys.modules["openpyxl"] = orig_openpyxl
+        else:
+            sys.modules.pop("openpyxl", None)
+
+

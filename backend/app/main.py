@@ -11,13 +11,11 @@ from backend.app.config import settings
 from backend.app.core.logging import setup_logging, request_id_ctx, logger
 from backend.app.core.redis import close_redis_connection
 from backend.app.api.health import router as health_router
-
-# Legacy routers preserved for backward compatibility
-from backend.app.api.voice import router as voice_router
-from backend.app.api.sales import router as sales_router
-from backend.app.api.recovery import router as recovery_router
-from backend.app.api.dashboard import router as dashboard_router
-from backend.app.api.admin import router as admin_router
+from backend.app.api.v1.auth import router as auth_v1_router
+from backend.app.api.v1.merchants import router as merchants_v1_router
+from backend.app.api.v1.webhooks import router as webhooks_v1_router
+from backend.app.api.v1.devices import router as devices_v1_router
+from backend.app.api.v1.websocket import router as ws_v1_router
 
 
 @asynccontextmanager
@@ -124,24 +122,13 @@ app.add_middleware(
 # Core Health Check Router (mounted at root /health and /api/health)
 app.include_router(health_router)
 
-# Legacy Routers preserved under /api for compatibility (non-financial/catalog prototype only)
-app.include_router(voice_router, prefix=settings.API_V1_STR)
-app.include_router(sales_router, prefix=settings.API_V1_STR)
-app.include_router(recovery_router, prefix=settings.API_V1_STR)
-app.include_router(dashboard_router, prefix=settings.API_V1_STR)
-app.include_router(admin_router, prefix=settings.API_V1_STR)
-
 # Canonical VoiceLedger API v1 Routers (Authoritative Production Path)
-from backend.app.api.v1.auth import router as auth_v1_router
-from backend.app.api.v1.merchants import router as merchants_v1_router
-from backend.app.api.v1.webhooks import router as webhooks_v1_router
-from backend.app.api.v1.devices import router as devices_v1_router
-from backend.app.api.v1.websocket import router as ws_v1_router
 app.include_router(auth_v1_router, prefix="/api/v1")
 app.include_router(merchants_v1_router, prefix="/api/v1")
 app.include_router(webhooks_v1_router, prefix="/api/v1")
 app.include_router(devices_v1_router, prefix="/api/v1")
 app.include_router(ws_v1_router)
+
 
 
 # Frontend Static Files Mount (for local monolithic runs if built)
