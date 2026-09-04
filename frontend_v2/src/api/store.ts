@@ -125,6 +125,8 @@ export interface BusinessTypesData {
 
 // ── Product Catalog APIs ─────────────────────────────────────────────
 
+// ── Product Catalog APIs ─────────────────────────────────────────────
+
 export async function listProductsApi(params?: {
   category?: string;
   search?: string;
@@ -136,23 +138,109 @@ export async function listProductsApi(params?: {
   if (params?.active_only !== undefined) q.append('active_only', String(params.active_only));
 
   const qs = q.toString();
-  return apiClient.get<Product[]>(`/api/v1/store/products${qs ? `?${qs}` : ''}`, {
-    requiresAuth: true,
-  });
+  let rawList: any[];
+
+  try {
+    rawList = await apiClient.get<any[]>(`/api/sales/catalog/products${qs ? `?${qs}` : ''}`, {
+      requiresAuth: false,
+    });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      rawList = await apiClient.get<any[]>(`/api/v1/store/products${qs ? `?${qs}` : ''}`, {
+        requiresAuth: true,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  return (rawList || []).map((p: any) => ({
+    id: String(p.id),
+    merchant_id: String(p.merchant_id || '1'),
+    name: p.name,
+    price: Number(p.price || 0),
+    price_minor: p.price_minor ?? Math.round(Number(p.price || 0) * 100),
+    category: p.category || 'General',
+    description: p.description || '',
+    unit: p.unit || 'unit',
+    stock_quantity: Number(p.stock_quantity ?? 100),
+    track_inventory: Boolean(p.track_inventory ?? false),
+    attributes: p.attributes || {},
+    is_active: p.is_active ?? true,
+    created_at: p.created_at || new Date().toISOString(),
+    updated_at: p.updated_at,
+  }));
 }
 
 export async function createProductApi(data: ProductCreateInput): Promise<Product> {
-  return apiClient.post<Product>('/api/v1/store/products', data, { requiresAuth: true });
+  let p: any;
+  try {
+    p = await apiClient.post<any>('/api/sales/catalog/products', data, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      p = await apiClient.post<any>('/api/v1/store/products', data, { requiresAuth: true });
+    } else {
+      throw err;
+    }
+  }
+  return {
+    id: String(p.id),
+    merchant_id: String(p.merchant_id || '1'),
+    name: p.name,
+    price: Number(p.price || 0),
+    price_minor: p.price_minor ?? Math.round(Number(p.price || 0) * 100),
+    category: p.category || 'General',
+    description: p.description || '',
+    unit: p.unit || 'unit',
+    stock_quantity: Number(p.stock_quantity ?? 100),
+    track_inventory: Boolean(p.track_inventory ?? false),
+    attributes: p.attributes || {},
+    is_active: p.is_active ?? true,
+    created_at: p.created_at || new Date().toISOString(),
+  };
 }
 
 export async function updateProductApi(id: string, data: ProductUpdateInput): Promise<Product> {
-  return apiClient.put<Product>(`/api/v1/store/products/${id}`, data, { requiresAuth: true });
+  let p: any;
+  try {
+    p = await apiClient.put<any>(`/api/sales/catalog/products/${id}`, data, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      p = await apiClient.put<any>(`/api/v1/store/products/${id}`, data, { requiresAuth: true });
+    } else {
+      throw err;
+    }
+  }
+  return {
+    id: String(p.id),
+    merchant_id: String(p.merchant_id || '1'),
+    name: p.name,
+    price: Number(p.price || 0),
+    price_minor: p.price_minor ?? Math.round(Number(p.price || 0) * 100),
+    category: p.category || 'General',
+    description: p.description || '',
+    unit: p.unit || 'unit',
+    stock_quantity: Number(p.stock_quantity ?? 100),
+    track_inventory: Boolean(p.track_inventory ?? false),
+    attributes: p.attributes || {},
+    is_active: p.is_active ?? true,
+    created_at: p.created_at || new Date().toISOString(),
+  };
 }
 
 export async function deleteProductApi(id: string): Promise<{ detail: string; id: string }> {
-  return apiClient.delete<{ detail: string; id: string }>(`/api/v1/store/products/${id}`, {
-    requiresAuth: true,
-  });
+  try {
+    return await apiClient.delete<{ detail: string; id: string }>(`/api/sales/catalog/products/${id}`, {
+      requiresAuth: false,
+    });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      return await apiClient.delete<{ detail: string; id: string }>(`/api/v1/store/products/${id}`, {
+        requiresAuth: true,
+      });
+    }
+    throw err;
+  }
 }
 
 // ── Inventory APIs ───────────────────────────────────────────────────
@@ -176,41 +264,130 @@ export async function listSalesApi(limit: number = 50, status?: string): Promise
   q.append('limit', String(limit));
   if (status && status !== 'ALL') q.append('status', status);
 
-  return apiClient.get<Sale[]>(`/api/v1/store/sales?${q.toString()}`, { requiresAuth: true });
+  let rawList: any[];
+  try {
+    rawList = await apiClient.get<any[]>(`/api/sales?${q.toString()}`, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      rawList = await apiClient.get<any[]>(`/api/v1/store/sales?${q.toString()}`, { requiresAuth: true });
+    } else {
+      throw err;
+    }
+  }
+
+  return (rawList || []).map((s: any) => ({
+    id: String(s.id),
+    merchant_id: String(s.merchant_id || '1'),
+    customer_name: s.customer_name || 'Walk-in Customer',
+    customer_phone: s.customer_phone,
+    total_amount: Number(s.total_amount || 0),
+    received_amount: Number(s.received_amount || 0),
+    outstanding_amount: Number(s.outstanding_amount || 0),
+    status: s.status || 'PENDING',
+    payment_id: s.payment_id,
+    razorpay_order_id: s.razorpay_order_id,
+    razorpay_payment_link_id: s.razorpay_payment_link_id,
+    razorpay_payment_link_url: s.razorpay_payment_link_url,
+    raw_voice_transcript: s.raw_voice_transcript,
+    created_at: s.created_at || new Date().toISOString(),
+    updated_at: s.updated_at,
+    items: (s.items || []).map((it: any) => ({
+      id: String(it.id || Math.random().toString(36).substring(7)),
+      product_id: it.product_id ? String(it.product_id) : undefined,
+      product_name: it.product_name || 'Item',
+      quantity: Number(it.quantity || 1),
+      unit_price: Number(it.unit_price || 0),
+      subtotal: Number(it.subtotal || (it.quantity || 1) * (it.unit_price || 0)),
+    })),
+  }));
 }
 
 export async function createSaleApi(data: SaleCreateInput): Promise<Sale> {
-  return apiClient.post<Sale>('/api/v1/store/sales', data, { requiresAuth: true });
+  let s: any;
+  try {
+    s = await apiClient.post<any>('/api/sales', data, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      s = await apiClient.post<any>('/api/v1/store/sales', data, { requiresAuth: true });
+    } else {
+      throw err;
+    }
+  }
+  return {
+    id: String(s.id),
+    merchant_id: String(s.merchant_id || '1'),
+    customer_name: s.customer_name || 'Walk-in Customer',
+    customer_phone: s.customer_phone,
+    total_amount: Number(s.total_amount || 0),
+    received_amount: Number(s.received_amount || 0),
+    outstanding_amount: Number(s.outstanding_amount || 0),
+    status: s.status || 'PENDING',
+    razorpay_payment_link_url: s.razorpay_payment_link_url,
+    created_at: s.created_at || new Date().toISOString(),
+    items: (s.items || []).map((it: any) => ({
+      id: String(it.id || Math.random().toString(36).substring(7)),
+      product_name: it.product_name,
+      quantity: Number(it.quantity || 1),
+      unit_price: Number(it.unit_price || 0),
+      subtotal: Number(it.subtotal || 0),
+    })),
+  };
 }
 
 export async function getSaleApi(id: string): Promise<Sale> {
-  return apiClient.get<Sale>(`/api/v1/store/sales/${id}`, { requiresAuth: true });
+  try {
+    return await apiClient.get<Sale>(`/api/sales/${id}`, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      return await apiClient.get<Sale>(`/api/v1/store/sales/${id}`, { requiresAuth: true });
+    }
+    throw err;
+  }
 }
 
 // ── Business Presets & Profiles ──────────────────────────────────────
 
 export async function getBusinessTypesApi(): Promise<BusinessTypesData> {
-  return apiClient.get<BusinessTypesData>('/api/v1/store/business-types', { requiresAuth: true });
+  try {
+    return await apiClient.get<BusinessTypesData>('/api/sales/catalog/business-types', { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      return await apiClient.get<BusinessTypesData>('/api/v1/store/business-types', { requiresAuth: true });
+    }
+    throw err;
+  }
 }
 
 export async function setBusinessTypeApi(
   businessType: string,
   seedSampleItems: boolean = false
 ): Promise<any> {
-  return apiClient.post(
-    '/api/v1/store/business-type',
-    { business_type: businessType, seed_sample_items: seedSampleItems },
-    { requiresAuth: true }
-  );
+  const payload = { business_type: businessType, seed_sample_items: seedSampleItems };
+  try {
+    return await apiClient.post('/api/sales/catalog/merchant/business-type', payload, { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      return await apiClient.post('/api/v1/store/business-type', payload, { requiresAuth: true });
+    }
+    throw err;
+  }
 }
 
 // ── Analytics & Excel Export ─────────────────────────────────────────
 
 export async function getSalesAnalyticsApi(): Promise<SalesAnalytics> {
-  return apiClient.get<SalesAnalytics>('/api/v1/store/analytics/summary', { requiresAuth: true });
+  try {
+    return await apiClient.get<SalesAnalytics>('/api/sales/analytics/summary', { requiresAuth: false });
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404')) {
+      return await apiClient.get<SalesAnalytics>('/api/v1/store/analytics/summary', { requiresAuth: true });
+    }
+    throw err;
+  }
 }
 
 export function getExcelExportUrl(): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-  return `${baseUrl}/api/v1/store/analytics/export/excel`;
+  return `${baseUrl}/api/sales/analytics/export/excel`;
 }
+

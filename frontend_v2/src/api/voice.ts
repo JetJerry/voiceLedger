@@ -21,15 +21,28 @@ export async function processVoiceTextApi(
   voiceLang: string = 'hi',
   speakResponse: boolean = true
 ): Promise<VoiceProcessResponse> {
-  return apiClient.post<VoiceProcessResponse>(
-    '/api/v1/voice/process-text',
-    {
-      text,
-      voice_lang: voiceLang,
-      speak_response: speakResponse,
-    },
-    { requiresAuth: true }
-  );
+  const payload = {
+    text,
+    voice_lang: voiceLang,
+    speak_response: speakResponse,
+  };
+
+  try {
+    return await apiClient.post<VoiceProcessResponse>(
+      '/api/voice/process-text',
+      payload,
+      { requiresAuth: false }
+    );
+  } catch (err: any) {
+    if (err?.status === 404 || err?.message?.includes('404') || err?.message?.includes('Not Found')) {
+      return await apiClient.post<VoiceProcessResponse>(
+        '/api/v1/voice/process-text',
+        payload,
+        { requiresAuth: false }
+      );
+    }
+    throw err;
+  }
 }
 
 export async function processVoiceAudioApi(audioBlob: Blob): Promise<VoiceProcessResponse> {
@@ -44,11 +57,21 @@ export async function processVoiceAudioApi(audioBlob: Blob): Promise<VoiceProces
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${baseUrl}/api/v1/voice/process-audio`, {
+  let response = await fetch(`${baseUrl}/api/voice/process-audio`, {
     method: 'POST',
     headers,
     body: formData,
   });
+
+  if (response.status === 404) {
+    const fallbackFormData = new FormData();
+    fallbackFormData.append('file', audioBlob, 'command.webm');
+    response = await fetch(`${baseUrl}/api/v1/voice/process-audio`, {
+      method: 'POST',
+      headers,
+      body: fallbackFormData,
+    });
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -61,5 +84,6 @@ export async function processVoiceAudioApi(audioBlob: Blob): Promise<VoiceProces
 export function getTtsAudioUrl(text: string, lang: string = 'hi'): string {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
   const q = new URLSearchParams({ text, lang });
-  return `${baseUrl}/api/v1/voice/speak?${q.toString()}`;
+  return `${baseUrl}/api/voice/speak?${q.toString()}`;
 }
+

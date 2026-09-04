@@ -170,7 +170,7 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-slate-700">
-                Merchant Email
+                Merchant Username or Email
               </label>
               <div className="mt-1 relative rounded-lg">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -179,12 +179,12 @@ export const LoginPage: React.FC = () => {
                 <input
                   id="email"
                   name="email"
-                  type="email"
-                  autoComplete="email"
+                  type="text"
+                  autoComplete="username"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="merchant@voiceledger.internal"
+                  placeholder="kirana or merchant@voiceledger.internal"
                   className="block w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent bg-white text-slate-900 placeholder:text-slate-400"
                 />
               </div>

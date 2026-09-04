@@ -257,3 +257,18 @@ def export_excel_report(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ── Dual Compatibility Sales Router (/api/sales/...) ─────────────────
+
+sales_router = APIRouter(prefix="/sales", tags=["Sales Compatibility"])
+sales_router.add_api_route("", list_sales, methods=["GET"], response_model=List[SaleResponse])
+sales_router.add_api_route("", create_sale, methods=["POST"], response_model=SaleResponse, status_code=status.HTTP_201_CREATED)
+sales_router.add_api_route("/analytics/summary", get_sales_analytics, methods=["GET"])
+sales_router.add_api_route("/analytics/export/excel", export_excel_report, methods=["GET"])
+sales_router.add_api_route("/catalog/products", list_products, methods=["GET"], response_model=List[ProductResponse])
+sales_router.add_api_route("/catalog/business-types", get_business_types, methods=["GET"])
+sales_router.add_api_route("/catalog/merchant/business-type", set_business_type, methods=["POST"])
+sales_router.add_api_route("/catalog/merchant/profile", get_store_profile, methods=["GET"])
+sales_router.add_api_route("/{sale_id}", get_sale, methods=["GET"], response_model=SaleResponse)
+

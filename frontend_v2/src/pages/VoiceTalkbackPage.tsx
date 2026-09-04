@@ -97,7 +97,10 @@ export const VoiceTalkbackPage: React.FC = () => {
 
     if (audioBase64) {
       try {
-        const audio = new Audio(audioBase64);
+        const src = audioBase64.startsWith('data:')
+          ? audioBase64
+          : `data:audio/mp3;base64,${audioBase64}`;
+        const audio = new Audio(src);
         currentAudioRef.current = audio;
         audio.play().catch((err) => console.warn('Audio play notice:', err));
         return;
@@ -358,6 +361,24 @@ export const VoiceTalkbackPage: React.FC = () => {
                 </div>
 
                 <p className="leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+
+                {/* Instant Razorpay Payment Link / QR Button */}
+                {msg.details?.sale?.razorpay_payment_link_url && (
+                  <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-1.5 text-2xs font-semibold text-emerald-800">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Razorpay Link: ₹{msg.details.sale.total_amount}</span>
+                    </div>
+                    <a
+                      href={msg.details.sale.razorpay_payment_link_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2.5 py-1 text-2xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition"
+                    >
+                      Open Link ↗
+                    </a>
+                  </div>
+                )}
 
                 {/* Agent Action Badge & Audio Button */}
                 {msg.sender === 'agent' && (

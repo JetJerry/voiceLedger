@@ -16,7 +16,7 @@ from backend.app.api.v1.merchants import router as merchants_v1_router
 from backend.app.api.v1.webhooks import router as webhooks_v1_router
 from backend.app.api.v1.devices import router as devices_v1_router
 from backend.app.api.v1.websocket import router as ws_v1_router
-from backend.app.api.v1.store import router as store_v1_router
+from backend.app.api.v1.store import router as store_v1_router, sales_router
 from backend.app.api.v1.payments import router as payments_v1_router
 from backend.app.api.v1.voice import router as voice_v1_router
 
@@ -134,6 +134,17 @@ app.include_router(store_v1_router, prefix="/api/v1")
 app.include_router(payments_v1_router, prefix="/api/v1")
 app.include_router(voice_v1_router, prefix="/api/v1")
 app.include_router(ws_v1_router)
+
+# Dual-Routing Compatibility Mounts (/api/* endpoints)
+app.include_router(auth_v1_router, prefix="/api")
+app.include_router(merchants_v1_router, prefix="/api")
+app.include_router(webhooks_v1_router, prefix="/api")
+app.include_router(devices_v1_router, prefix="/api")
+app.include_router(store_v1_router, prefix="/api")
+app.include_router(sales_router, prefix="/api")
+app.include_router(payments_v1_router, prefix="/api")
+app.include_router(voice_v1_router, prefix="/api")
+
 
 # Frontend Static Files Mount (for local monolithic runs if built)
 repo_root = Path(__file__).resolve().parent.parent.parent
