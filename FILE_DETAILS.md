@@ -121,22 +121,10 @@ Customer UPI Payment (PhonePe, GPay, Paytm)
 - **Connected Files**: [backend/app/main.py](file:///d:/razorpay/backend/app/main.py).
 - **Why we need it**: Convenience runner for launching the API from the root directory during development.
 
-### [modal_app.py](file:///d:/razorpay/modal_app.py)
-- **File Path**: `d:\razorpay\modal_app.py`
-- **What it does**: Serverless cloud deployment configuration for Modal.com to host the application or heavy AI/TTS workloads.
-- **Connected Files**: [backend/app/main.py](file:///d:/razorpay/backend/app/main.py).
-- **Why we need it**: Enables optional zero-server deployment on Modal infrastructure.
-
-### [vercel.json](file:///d:/razorpay/vercel.json)
-- **File Path**: `d:\razorpay\vercel.json`
-- **What it does**: Routing and rewrite configuration for deploying static web bundles to Vercel.
-- **Connected Files**: [frontend/](file:///d:/razorpay/frontend/).
-- **Why we need it**: Allows optional static web hosting of the merchant dashboard.
-
 ### [README.md](file:///d:/razorpay/README.md)
 - **File Path**: `d:\razorpay\README.md`
 - **What it does**: Root documentation presenting VoiceLedger's mission, high-level features, system architecture diagram, and links to setup guides.
-- **Connected Files**: [USER_SETUP_GUIDE.md](file:///d:/razorpay/USER_SETUP_GUIDE.md), [DEPLOYMENT.md](file:///d:/razorpay/DEPLOYMENT.md).
+- **Connected Files**: [USER_SETUP_GUIDE.md](file:///d:/razorpay/USER_SETUP_GUIDE.md), [RENDER_DEPLOYMENT.md](file:///d:/razorpay/RENDER_DEPLOYMENT.md).
 - **Why we need it**: The landing page for the repository and first document judges and developers see.
 
 ### [USER_SETUP_GUIDE.md](file:///d:/razorpay/USER_SETUP_GUIDE.md)
@@ -145,11 +133,11 @@ Customer UPI Payment (PhonePe, GPay, Paytm)
 - **Connected Files**: [backend/scripts/live_demo_smoke.py](file:///d:/razorpay/backend/scripts/live_demo_smoke.py), [backend/tests/](file:///d:/razorpay/backend/tests/).
 - **Why we need it**: The primary operational playbook for onboarding and evaluating VoiceLedger.
 
-### [DEPLOYMENT.md](file:///d:/razorpay/DEPLOYMENT.md)
-- **File Path**: `d:\razorpay\DEPLOYMENT.md`
-- **What it does**: Production deployment guidance covering Docker, environment security, and network setup.
-- **Connected Files**: [docker-compose.yml](file:///d:/razorpay/docker-compose.yml), [.env.example](file:///d:/razorpay/.env.example).
-- **Why we need it**: Explains production hardening and deployment topology.
+### [RENDER_DEPLOYMENT.md](file:///d:/razorpay/RENDER_DEPLOYMENT.md)
+- **File Path**: `d:\razorpay\RENDER_DEPLOYMENT.md`
+- **What it does**: Production deployment runbook for Render.com covering Blueprint orchestration, PostgreSQL, Redis, Docker container environment, and Razorpay webhook integration.
+- **Connected Files**: [render.yaml](file:///d:/razorpay/render.yaml), [Dockerfile](file:///d:/razorpay/Dockerfile), [scripts/start.sh](file:///d:/razorpay/scripts/start.sh).
+- **Why we need it**: Explains cloud deployment topology and live smoke verification.
 
 ---
 
