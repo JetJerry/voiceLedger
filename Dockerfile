@@ -1,4 +1,4 @@
-# VoiceLedger — Production Dockerfile for Railway & Cloud Deployments
+# VoiceLedger — Production Dockerfile for Render & Cloud Deployments
 FROM python:3.12-slim AS builder
 
 WORKDIR /app

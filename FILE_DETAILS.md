@@ -562,3 +562,13 @@ Located in `frontend/`. Universal React Native (Expo) app targeting Web, Android
 - **[evaluation/dataset.json](file:///d:/razorpay/evaluation/dataset.json)**: Benchmark dataset of multimodal merchant voice inputs in Hindi, Hinglish, and English.
 - **[evaluation/dataset_generator.py](file:///d:/razorpay/evaluation/dataset_generator.py)**: Synthesizer for generating test audio samples with varying accents and background noise.
 - **[evaluation/evaluate.py](file:///d:/razorpay/evaluation/evaluate.py)**: Benchmarking script measuring intent extraction accuracy and pricing precision.
+
+---
+
+## 17. Cloud Deployment & Container Orchestration
+
+- **[render.yaml](file:///d:/razorpay/render.yaml)**: Infrastructure-as-Code Render Blueprint specification. Provisions PostgreSQL 16, Key-Value (Redis), and Docker Web Service with automatic branch binding (`feature/connection`), health checks (`/health`), and dynamic secret generation.
+- **[RENDER_DEPLOYMENT.md](file:///d:/razorpay/RENDER_DEPLOYMENT.md)**: Exhaustive deployment runbook with step-by-step instructions for 1-click Blueprint or manual Render dashboard setup, environment variable configurations, live Razorpay webhook registration, and Soundbox hardware connectivity.
+- **[Dockerfile](file:///d:/razorpay/Dockerfile)**: Multi-stage, production-grade root Docker container build using `astral-sh/uv` fast dependency synchronization, non-root user permissions, and container health checking.
+- **[scripts/start.sh](file:///d:/razorpay/scripts/start.sh)**: Cloud container boot script executing automatic Alembic database schema migrations, launching the transactional outbox worker in the background (`RUN_WORKER=true`), and binding Uvicorn to Render's dynamic `$PORT`.
+
