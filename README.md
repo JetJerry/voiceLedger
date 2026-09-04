@@ -11,7 +11,7 @@
 | **Live Web App (Primary)** | [https://voiceledger-one.vercel.app](https://voiceledger-one.vercel.app) | 🟢 Active & Verified |
 | **Live Web App (Mirror)** | [https://voice-box-pi.vercel.app](https://voice-box-pi.vercel.app) | 🟢 Active & Verified |
 | **Modal Serverless Backend** | [https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run](https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run) | 🟢 Live API |
-| **Interactive OpenAPI Docs** | [https://voiceledger-le5d.onrender.com/docs]([https://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.run/](https://voiceledger-le5d.onrender.com/)docs) | 📖 Swagger UI |
+| **Interactive OpenAPI Docs** | [https://voiceledger-le5d.onrender.com/docs](https://voiceledger-le5d.onrender.com/)docs) | 📖 Swagger UI |
 
 ---
 
