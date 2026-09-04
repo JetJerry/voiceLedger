@@ -26,6 +26,7 @@ class VoiceExtractionResult(BaseModel):
 
 class VoiceProcessRequest(BaseModel):
     text: str = Field(..., description="Transcribed merchant speech or typed text query")
+    merchant_id: Optional[str] = Field(default=None, description="Active merchant context UUID")
     speak_response: bool = Field(default=True, description="Whether to generate TTS neural voice audio")
     voice_lang: str = Field(default="hi", description="hi (Hindi) or en (English)")
     context: str = Field(default="terminal", description="terminal or catalog — adjusts intent priority")

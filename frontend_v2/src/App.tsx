@@ -10,6 +10,10 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DevicesPage } from './pages/DevicesPage';
 import { ArchitecturePage } from './pages/ArchitecturePage';
+import { PaymentsPage } from './pages/PaymentsPage';
+import { StorePage } from './pages/StorePage';
+import { SalesPage } from './pages/SalesPage';
+import { VoiceTalkbackPage } from './pages/VoiceTalkbackPage';
 
 export const App: React.FC = () => {
   return (
@@ -31,6 +35,10 @@ export const App: React.FC = () => {
                 }
               >
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/store" element={<StorePage />} />
+                <Route path="/sales" element={<SalesPage />} />
+                <Route path="/talkback" element={<VoiceTalkbackPage />} />
                 <Route path="/devices" element={<DevicesPage />} />
                 <Route path="/architecture" element={<ArchitecturePage />} />
               </Route>

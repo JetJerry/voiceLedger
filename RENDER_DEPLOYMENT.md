@@ -1,9 +1,9 @@
 # VoiceLedger — Render Deployment Guide
 
-Complete step-by-step instructions for deploying **VoiceLedger** to [Render](https://render.com) using your current development branch: **`feature/connection`**.
+Complete step-by-step instructions for deploying **VoiceLedger** to [Render](https://render.com) using your current development branch: **`feature/full-voiceledger-integration`**.
 
 > [!IMPORTANT]
-> **Branch Notice**: Do **NOT** merge or push to `main`. This deployment is configured specifically for your current branch: **`feature/connection`**. When configuring the service or Blueprint on Render, ensure the branch is set to `feature/connection`.
+> **Branch Notice**: Do **NOT** merge or push to `main` or `feature/connection`. This deployment is configured specifically for your current integration branch: **`feature/full-voiceledger-integration`**. When configuring the service or Blueprint on Render, ensure the branch is set to `feature/full-voiceledger-integration`.
 
 ---
 
@@ -28,6 +28,7 @@ Soundbox Device (WSS)     ───► │  /ws/device                          
                           ┌───────────────────────────┐    ┌─────────────────┐
                           │     Render PostgreSQL     │    │ Render KeyValue │
                           │     (Managed Database)    │    │ (Redis Pub/Sub) │
+                          │     (Alembic 0003 Head)   │    │                 │
                           └───────────────────────────┘    └─────────────────┘
 ```
 
@@ -40,25 +41,40 @@ The container uses `scripts/start.sh` to automatically:
 
 ## Deployment Options
 
-Choose either **Option A (Render Blueprint — Recommended)** or **Option B (Manual Dashboard Setup)**.
+Choose either **Option A (Update Existing Service — Recommended)** or **Option B (New Service)**.
 
 ---
 
-### Option A: 1-Click Deployment via Blueprint (`render.yaml`)
+### Option A: Update Existing Render Service (Fastest & Preserves Data)
 
-Render Blueprints allow you to provision PostgreSQL, Key-Value (Redis), and the Web Service together in a single click using the included [render.yaml](file:///d:/razorpay/render.yaml).
+If you already have a pre-existing Render deployment from `feature/connection`:
+
+#### Step 1: Update Branch in Render Dashboard
+1. Go to [dashboard.render.com](https://dashboard.render.com) and click on your **`voiceledger-api`** service.
+2. Go to **Settings** -> **Build & Deploy** -> **Branch**.
+3. Change the branch from `feature/connection` to **`feature/full-voiceledger-integration`**.
+4. Click **Save Changes**.
+
+#### Step 2: Trigger Manual Deploy
+1. In the top right corner, click **Manual Deploy** -> **Deploy latest commit**.
+2. Render will build the updated Docker container with the new store/sales/voice endpoints.
+3. During startup, `scripts/start.sh` will check migrations and launch the outbox worker and API.
+
+---
+
+### Option B: 1-Click Deployment via Blueprint (`render.yaml`)
 
 #### Step 1: Push Current Branch
-Ensure your changes on `feature/connection` are pushed to GitHub:
+Ensure your changes on `feature/full-voiceledger-integration` are pushed to GitHub:
 ```bash
-git push origin feature/connection
+git push origin feature/full-voiceledger-integration
 ```
 
 #### Step 2: Create Blueprint in Render
 1. Log in to [dashboard.render.com](https://dashboard.render.com).
 2. Click **New +** in the top navigation bar and select **Blueprint**.
 3. Connect your GitHub repository: `JetJerry/voiceLedger` (or your personal fork).
-4. In the **Branch** dropdown, select **`feature/connection`** (do not select `main`).
+4. In the **Branch** dropdown, select **`feature/full-voiceledger-integration`**.
 5. Render will automatically detect `render.yaml` and display the resources to be created:
    - `voiceledger-db` (PostgreSQL)
    - `voiceledger-redis` (Key-Value / Redis)

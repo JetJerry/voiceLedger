@@ -72,7 +72,7 @@ def build_voiceledger_graph(db: Session):
 def run_voiceledger_agent_workflow(
     db: Session,
     request: VoiceProcessRequest,
-    merchant_id: Optional[int] = None
+    merchant_id: Optional[Any] = None
 ) -> VoiceProcessResponse:
     """
     Executes the compiled LangGraph workflow with deep LangSmith observability.
@@ -80,10 +80,12 @@ def run_voiceledger_agent_workflow(
     """
     compiled_app = build_voiceledger_graph(db)
 
+    active_merchant_id = merchant_id or request.merchant_id
+
     # Initial State
     initial_state: VoiceLedgerState = {
         "raw_text": request.text,
-        "merchant_id": merchant_id,
+        "merchant_id": active_merchant_id,
         "context": request.context or "terminal",
         "voice_lang": request.voice_lang or "hi",
         "speak_response": request.speak_response if request.speak_response is not None else True,

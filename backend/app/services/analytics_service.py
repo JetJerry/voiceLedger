@@ -1,42 +1,41 @@
 import io
 import json
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, SaleItem
-from backend.app.services.sales_service import sales_service
 
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
+from backend.app.models.merchant import Merchant
+from backend.app.models.product import Product
+from backend.app.models.sale import Sale, SaleItem
 
 
 class AnalyticsService:
-    def get_period_sales_analytics(self, db: Session, merchant_id: Optional[int] = None) -> Dict[str, Any]:
+    def get_period_sales_analytics(
+        self,
+        db: Session,
+        merchant_id: uuid.UUID,
+    ) -> Dict[str, Any]:
         """
         Calculates sales and product metrics segmented by Today (Day), This Week (7 Days),
-        This Month (30 Days), and All-Time.
+        This Month (30 Days), and All-Time, strictly isolated by merchant_id.
         """
-        if merchant_id:
-            merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
-        else:
-            merchant = sales_service.get_or_create_merchant(db)
-
+        merchant = db.query(Merchant).filter(Merchant.id == merchant_id).first()
         if not merchant:
             return {}
 
-        now_naive = datetime.utcnow()
-        today_start = datetime(now_naive.year, now_naive.month, now_naive.day)
-        week_start = now_naive - timedelta(days=7)
-        month_start = now_naive - timedelta(days=30)
+        now_utc = datetime.now(timezone.utc)
+        today_start = datetime(now_utc.year, now_utc.month, now_utc.day, tzinfo=timezone.utc)
+        week_start = now_utc - timedelta(days=7)
+        month_start = now_utc - timedelta(days=30)
 
-        all_sales = db.query(Sale).filter(Sale.merchant_id == merchant.id).order_by(Sale.created_at.desc()).all()
+        all_sales = (
+            db.query(Sale)
+            .filter(Sale.merchant_id == merchant.id)
+            .order_by(Sale.created_at.desc())
+            .all()
+        )
         products = db.query(Product).filter(Product.merchant_id == merchant.id).all()
-
-        def _normalize_dt(dt: Optional[datetime]) -> datetime:
-            if dt is None:
-                return datetime.min
-            return dt.replace(tzinfo=None) if dt.tzinfo is not None else dt
 
         def _compute_period_stats(sales_list: List[Sale]) -> Dict[str, Any]:
             count = len(sales_list)
@@ -76,10 +75,9 @@ class AnalyticsService:
                 "product_sales_map": product_sales,
             }
 
-        # Filter sales for each period safely
-        sales_today = [s for s in all_sales if _normalize_dt(s.created_at) >= today_start]
-        sales_week = [s for s in all_sales if _normalize_dt(s.created_at) >= week_start]
-        sales_month = [s for s in all_sales if _normalize_dt(s.created_at) >= month_start]
+        sales_today = [s for s in all_sales if s.created_at >= today_start]
+        sales_week = [s for s in all_sales if s.created_at >= week_start]
+        sales_month = [s for s in all_sales if s.created_at >= month_start]
 
         today_stats = _compute_period_stats(sales_today)
         week_stats = _compute_period_stats(sales_week)
@@ -89,23 +87,18 @@ class AnalyticsService:
         # Catalog performance summary
         catalog_summary = []
         for p in products:
-            attrs = {}
-            if p.attributes:
-                try:
-                    attrs = json.loads(p.attributes)
-                except Exception:
-                    attrs = {}
-
+            attrs = p.attributes if isinstance(p.attributes, dict) else {}
             p_name = p.name.lower().strip()
             month_p = month_stats["product_sales_map"].get(p_name, {"units": 0, "revenue": 0.0})
             all_p = all_time_stats["product_sales_map"].get(p_name, {"units": 0, "revenue": 0.0})
 
             catalog_summary.append({
-                "id": p.id,
+                "id": str(p.id),
                 "name": p.name,
                 "category": p.category or "General",
                 "price": p.price,
                 "unit": p.unit or "piece",
+                "stock_quantity": p.stock_quantity,
                 "description": p.description or "",
                 "attributes": attrs,
                 "is_active": p.is_active,
@@ -116,12 +109,12 @@ class AnalyticsService:
 
         return {
             "merchant": {
-                "id": merchant.id,
+                "id": str(merchant.id),
                 "name": merchant.name,
                 "business_type": merchant.business_type,
                 "currency": merchant.currency or "INR",
             },
-            "generated_at": now_naive.isoformat(),
+            "generated_at": now_utc.isoformat(),
             "periods": {
                 "today": today_stats,
                 "week": week_stats,
@@ -131,7 +124,7 @@ class AnalyticsService:
             "catalog_summary": catalog_summary,
         }
 
-    def generate_excel_report(self, db: Session, merchant_id: Optional[int] = None) -> bytes:
+    def generate_excel_report(self, db: Session, merchant_id: uuid.UUID) -> bytes:
         """
         Generates a professionally styled Excel workbook (.xlsx) with 3 sheets:
         1. Executive Sales Analytics (Day / Week / Month Summary)
@@ -140,12 +133,23 @@ class AnalyticsService:
         """
         analytics = self.get_period_sales_analytics(db, merchant_id)
         merchant_info = analytics.get("merchant", {})
-        merchant_id_val = merchant_info.get("id")
-        
-        all_sales = db.query(Sale).filter(Sale.merchant_id == merchant_id_val).order_by(Sale.created_at.desc()).all()
+
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+            from openpyxl.utils import get_column_letter
+        except ImportError:
+            raise RuntimeError("openpyxl is required to generate Excel reports. Please install it.")
+
+        all_sales = (
+            db.query(Sale)
+            .filter(Sale.merchant_id == merchant_id)
+            .order_by(Sale.created_at.desc())
+            .all()
+        )
 
         wb = openpyxl.Workbook()
-        
+
         # Styles
         font_title = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
         font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
@@ -173,7 +177,7 @@ class AnalyticsService:
         )
 
         # ─────────────────────────────────────────────────────────────
-        # SHEET 1: 📊 EXECUTIVE SUMMARY (Day / Week / Month)
+        # SHEET 1: EXECUTIVE SUMMARY (Day / Week / Month)
         # ─────────────────────────────────────────────────────────────
         ws1 = wb.active
         ws1.title = "Sales Analytics Summary"
@@ -198,213 +202,181 @@ class AnalyticsService:
             f"Collected Amount ({merchant_info.get('currency', 'INR')})",
             f"Outstanding Amount ({merchant_info.get('currency', 'INR')})",
             "Paid Orders",
-            "Collection Rate",
+            "Collection Rate (%)",
         ]
-        
+
         row_idx = 5
-        for col_idx, h in enumerate(period_headers, start=1):
+        for col_idx, h in enumerate(period_headers, 1):
             c = ws1.cell(row=row_idx, column=col_idx, value=h)
             c.font = font_header
             c.fill = fill_dark
             c.alignment = align_center
             c.border = thin_border
 
-        # Period Data Rows
         periods_data = [
-            ("📅 Today (Last 24h)", analytics["periods"]["today"]),
-            ("📅 This Week (7 Days)", analytics["periods"]["week"]),
-            ("📅 This Month (30 Days)", analytics["periods"]["month"]),
-            ("🏆 All-Time Total", analytics["periods"]["all_time"]),
+            ("Today (Last 24h)", analytics["periods"]["today"]),
+            ("This Week (Last 7 Days)", analytics["periods"]["week"]),
+            ("This Month (Last 30 Days)", analytics["periods"]["month"]),
+            ("All-Time Cumulative", analytics["periods"]["all_time"]),
         ]
 
-        row_idx = 6
-        for period_label, stats in periods_data:
-            ws1.cell(row=row_idx, column=1, value=period_label).font = font_bold
-            ws1.cell(row=row_idx, column=2, value=stats["orders_count"]).alignment = align_center
-            ws1.cell(row=row_idx, column=3, value=stats["total_gmv"]).number_format = "₹#,##0.00"
-            ws1.cell(row=row_idx, column=4, value=stats["total_collected"]).number_format = "₹#,##0.00"
-            ws1.cell(row=row_idx, column=5, value=stats["total_outstanding"]).number_format = "₹#,##0.00"
-            ws1.cell(row=row_idx, column=6, value=f"{stats['paid_orders_count']} / {stats['orders_count']}").alignment = align_center
-            ws1.cell(row=row_idx, column=7, value=f"{stats['collection_rate']}%").alignment = align_center
-
-            for c_idx in range(1, 8):
-                cell = ws1.cell(row=row_idx, column=c_idx)
-                cell.border = thin_border
-                if row_idx % 2 == 0:
-                    cell.fill = fill_row_zebra
+        for p_label, p_data in periods_data:
             row_idx += 1
+            is_all_time = "Cumulative" in p_label
+            row_font = font_bold if is_all_time else font_regular
+            bg = fill_row_zebra if row_idx % 2 == 0 and not is_all_time else PatternFill(fill_type=None)
 
-        # Top Selling Products Section
-        row_idx += 2
-        ws1.merge_cells(f"A{row_idx}:D{row_idx}")
-        top_title = ws1[f"A{row_idx}"]
-        top_title.value = "🔥 Top Selling Products (This Month)"
-        top_title.font = font_header
-        top_title.fill = fill_secondary
-        top_title.alignment = align_left
+            row_values = [
+                p_label,
+                p_data["orders_count"],
+                p_data["total_gmv"],
+                p_data["total_collected"],
+                p_data["total_outstanding"],
+                f"{p_data['paid_orders_count']} / {p_data['orders_count']}",
+                f"{p_data['collection_rate']}%",
+            ]
 
-        row_idx += 1
-        top_headers = ["Rank", "Product Name", "Units Sold", f"Total Revenue ({merchant_info.get('currency', 'INR')})"]
-        for c_idx, h in enumerate(top_headers, start=1):
-            c = ws1.cell(row=row_idx, column=c_idx, value=h)
-            c.font = font_bold
-            c.fill = fill_dark
-            c.font = font_header
-            c.alignment = align_center
-            c.border = thin_border
+            for col_idx, val in enumerate(row_values, 1):
+                c = ws1.cell(row=row_idx, column=col_idx, value=val)
+                c.font = row_font
+                c.border = thin_border
+                if not is_all_time and bg.fill_type:
+                    c.fill = bg
+                c.alignment = align_left if col_idx == 1 else align_right
 
-        top_prods = analytics["periods"]["month"].get("top_products", [])
-        row_idx += 1
-        if not top_prods:
-            ws1.cell(row=row_idx, column=1, value="No product sales recorded in the last 30 days.")
-            ws1.merge_cells(f"A{row_idx}:D{row_idx}")
-            row_idx += 1
-        else:
-            for rank, tp in enumerate(top_prods, start=1):
-                ws1.cell(row=row_idx, column=1, value=f"#{rank}").alignment = align_center
-                ws1.cell(row=row_idx, column=2, value=tp["name"].title()).font = font_bold
-                ws1.cell(row=row_idx, column=3, value=tp["units"]).alignment = align_center
-                ws1.cell(row=row_idx, column=4, value=tp["revenue"]).number_format = "₹#,##0.00"
-                for c_idx in range(1, 5):
-                    ws1.cell(row=row_idx, column=c_idx).border = thin_border
-                row_idx += 1
+        # Auto-fit columns
+        for col in ws1.columns:
+            max_len = max(len(str(cell.value or "")) for cell in col)
+            ws1.column_dimensions[get_column_letter(col[0].column)].width = max(max_len + 4, 15)
 
         # ─────────────────────────────────────────────────────────────
-        # SHEET 2: 📦 PRODUCT CATALOG & PERFORMANCE
+        # SHEET 2: PRODUCT CATALOG & VOLUME
         # ─────────────────────────────────────────────────────────────
-        ws2 = wb.create_sheet(title="Product Catalog & Stock")
+        ws2 = wb.create_sheet(title="Catalog & Products")
         ws2.views.sheetView[0].showGridLines = True
 
         ws2.merge_cells("A1:H2")
-        cat_title = ws2["A1"]
-        cat_title.value = "📦 Complete Product Catalog & Sales Performance"
-        cat_title.font = font_title
-        cat_title.fill = fill_primary
-        cat_title.alignment = align_center
+        t2 = ws2["A1"]
+        t2.value = f"📦 {merchant_info.get('name', 'Store')} — Catalog & Inventory Inventory"
+        t2.font = font_title
+        t2.fill = fill_secondary
+        t2.alignment = align_center
 
         cat_headers = [
-            "Item ID",
-            "Product Name",
+            "Item Name",
             "Category",
-            "Unit Price (₹)",
-            "Unit of Measure",
-            "Dynamic Attributes / Specs",
-            "Units Sold (Month)",
-            "Total Revenue Generated (₹)",
+            f"Price ({merchant_info.get('currency', 'INR')})",
+            "Unit",
+            "Stock Qty",
+            "Units Sold (30 Days)",
+            "Units Sold (All-Time)",
+            f"Total Revenue ({merchant_info.get('currency', 'INR')})",
         ]
 
         row_idx = 4
-        for c_idx, h in enumerate(cat_headers, start=1):
-            c = ws2.cell(row=row_idx, column=c_idx, value=h)
+        for col_idx, h in enumerate(cat_headers, 1):
+            c = ws2.cell(row=row_idx, column=col_idx, value=h)
             c.font = font_header
             c.fill = fill_dark
             c.alignment = align_center
             c.border = thin_border
 
-        row_idx = 5
         for item in analytics.get("catalog_summary", []):
-            attrs_text = ", ".join([f"{k}: {v}" for k, v in item["attributes"].items()]) or "Standard"
-            ws2.cell(row=row_idx, column=1, value=item["id"]).alignment = align_center
-            ws2.cell(row=row_idx, column=2, value=item["name"].title()).font = font_bold
-            ws2.cell(row=row_idx, column=3, value=item["category"]).alignment = align_center
-            ws2.cell(row=row_idx, column=4, value=item["price"]).number_format = "₹#,##0.00"
-            ws2.cell(row=row_idx, column=5, value=item["unit"]).alignment = align_center
-            ws2.cell(row=row_idx, column=6, value=attrs_text)
-            ws2.cell(row=row_idx, column=7, value=item["units_sold_month"]).alignment = align_center
-            ws2.cell(row=row_idx, column=8, value=item["revenue_all_time"]).number_format = "₹#,##0.00"
-
-            for c_idx in range(1, 9):
-                cell = ws2.cell(row=row_idx, column=c_idx)
-                cell.border = thin_border
-                if row_idx % 2 == 1:
-                    cell.fill = fill_row_zebra
             row_idx += 1
+            bg = fill_row_zebra if row_idx % 2 == 0 else PatternFill(fill_type=None)
+            vals = [
+                item["name"].title(),
+                item["category"],
+                item["price"],
+                item["unit"],
+                item.get("stock_quantity", 0),
+                item["units_sold_month"],
+                item["units_sold_all_time"],
+                item["revenue_all_time"],
+            ]
+            for col_idx, val in enumerate(vals, 1):
+                c = ws2.cell(row=row_idx, column=col_idx, value=val)
+                c.font = font_regular
+                c.border = thin_border
+                if bg.fill_type:
+                    c.fill = bg
+                c.alignment = align_left if col_idx in (1, 2, 4) else align_right
+
+        for col in ws2.columns:
+            max_len = max(len(str(cell.value or "")) for cell in col)
+            ws2.column_dimensions[get_column_letter(col[0].column)].width = max(max_len + 4, 15)
 
         # ─────────────────────────────────────────────────────────────
-        # SHEET 3: 🧾 DETAILED SALES TRANSACTIONS LEDGER
+        # SHEET 3: TRANSACTIONS & SALES LEDGER
         # ─────────────────────────────────────────────────────────────
         ws3 = wb.create_sheet(title="Sales Transactions Ledger")
         ws3.views.sheetView[0].showGridLines = True
 
-        ws3.merge_cells("A1:J2")
-        sales_title = ws3["A1"]
-        sales_title.value = "🧾 Complete Sales Transactions & Payment Ledger"
-        sales_title.font = font_title
-        sales_title.fill = fill_primary
-        sales_title.alignment = align_center
+        ws3.merge_cells("A1:H2")
+        t3 = ws3["A1"]
+        t3.value = f"🧾 {merchant_info.get('name', 'Store')} — Sales Transactions Ledger"
+        t3.font = font_title
+        t3.fill = PatternFill(start_color="0284C7", end_color="0284C7", fill_type="solid")
+        t3.alignment = align_center
 
-        sales_headers = [
-            "Sale ID",
+        txn_headers = [
+            "Order ID",
             "Date & Time",
             "Customer Name",
-            "Customer Phone",
             "Items Purchased",
-            "Total Amount (₹)",
-            "Received Amount (₹)",
-            "Outstanding (₹)",
-            "Payment Status",
-            "Razorpay Payment Link",
+            f"Total ({merchant_info.get('currency', 'INR')})",
+            f"Received ({merchant_info.get('currency', 'INR')})",
+            f"Outstanding ({merchant_info.get('currency', 'INR')})",
+            "Status",
         ]
 
         row_idx = 4
-        for c_idx, h in enumerate(sales_headers, start=1):
-            c = ws3.cell(row=row_idx, column=c_idx, value=h)
+        for col_idx, h in enumerate(txn_headers, 1):
+            c = ws3.cell(row=row_idx, column=col_idx, value=h)
             c.font = font_header
             c.fill = fill_dark
             c.alignment = align_center
             c.border = thin_border
 
-        row_idx = 5
         for s in all_sales:
-            items_str = ", ".join([f"{it.quantity}x {it.product_name} (₹{it.subtotal:.2f})" for it in s.items])
-            date_str = s.created_at.strftime("%d-%m-%Y %H:%M") if s.created_at else "N/A"
-
-            customer_phone_str = s.customer.phone if (s.customer and s.customer.phone) else "N/A"
-            ws3.cell(row=row_idx, column=1, value=s.id).alignment = align_center
-            ws3.cell(row=row_idx, column=2, value=date_str).alignment = align_center
-            ws3.cell(row=row_idx, column=3, value=s.customer_name or "Walk-in Customer")
-            ws3.cell(row=row_idx, column=4, value=customer_phone_str).alignment = align_center
-            ws3.cell(row=row_idx, column=5, value=items_str)
-            ws3.cell(row=row_idx, column=6, value=s.total_amount).number_format = "₹#,##0.00"
-            ws3.cell(row=row_idx, column=7, value=s.received_amount).number_format = "₹#,##0.00"
-            ws3.cell(row=row_idx, column=8, value=s.outstanding_amount).number_format = "₹#,##0.00"
-            
-            # Status styling
-            status_cell = ws3.cell(row=row_idx, column=9, value=s.status)
-            status_cell.alignment = align_center
-            status_cell.font = font_bold
-            if s.status == "PAID":
-                status_cell.fill = fill_paid
-            elif s.status == "PENDING":
-                status_cell.fill = fill_pending
-            elif s.status == "PARTIAL":
-                status_cell.fill = fill_partial
-
-            ws3.cell(row=row_idx, column=10, value=s.razorpay_payment_link_url or "N/A")
-
-            for c_idx in range(1, 11):
-                ws3.cell(row=row_idx, column=c_idx).border = thin_border
-
             row_idx += 1
+            item_desc = ", ".join(f"{it.quantity}x {it.product_name}" for it in s.items) or "N/A"
+            date_str = s.created_at.strftime("%d %b %Y, %H:%M") if s.created_at else "N/A"
 
-        # Auto-fit column widths across all sheets
-        for sheet in [ws1, ws2, ws3]:
-            for col in sheet.columns:
-                max_len = 0
-                col_letter = get_column_letter(col[0].column)
-                for cell in col:
-                    if cell.row in [1, 2]: # Skip merged title banner
-                        continue
-                    val = str(cell.value or "")
-                    if len(val) > max_len:
-                        max_len = len(val)
-                sheet.column_dimensions[col_letter].width = max(max_len + 4, 12)
+            vals = [
+                s.id,
+                date_str,
+                s.customer_name or "Walk-in Customer",
+                item_desc,
+                s.total_amount,
+                s.received_amount,
+                s.outstanding_amount,
+                s.status,
+            ]
 
-        # Output to bytes
-        buffer = io.BytesIO()
-        wb.save(buffer)
-        buffer.seek(0)
-        return buffer.getvalue()
+            for col_idx, val in enumerate(vals, 1):
+                c = ws3.cell(row=row_idx, column=col_idx, value=val)
+                c.font = font_regular
+                c.border = thin_border
+                c.alignment = align_left if col_idx in (1, 2, 3, 4) else align_right
+
+                if col_idx == 8:
+                    c.alignment = align_center
+                    if s.status == "PAID":
+                        c.fill = fill_paid
+                    elif s.status == "PARTIAL":
+                        c.fill = fill_partial
+                    else:
+                        c.fill = fill_pending
+
+        for col in ws3.columns:
+            max_len = max(len(str(cell.value or "")) for cell in col)
+            ws3.column_dimensions[get_column_letter(col[0].column)].width = max(max_len + 4, 15)
+
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        return stream.getvalue()
 
 
 analytics_service = AnalyticsService()

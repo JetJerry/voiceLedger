@@ -1,19 +1,22 @@
 """
 VoiceLedger Agent Tools — Deterministic, Grounded AI Agent Execution Layer.
 Instrumented with LangSmith @traceable for deep execution observability.
+Strictly isolated by merchant_id UUID for multi-tenant safety.
 """
-
 import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from langsmith import traceable
 
-from backend.app.models.legacy import LegacyMerchant as Merchant, Product, Sale, LegacyPayment as Payment, Customer
-from backend.app.schemas.sale import SaleCreate, SaleItemCreate
-from backend.app.services.sales_service import sales_service
-from backend.app.services.recovery_service import recovery_service
+from backend.app.models.merchant import Merchant
+from backend.app.models.product import Product
+from backend.app.models.sale import Sale, SaleItem
+from backend.app.models.payment import Payment
+from backend.app.schemas.sale import SaleCreate, SaleItemCreate, ProductCreate
+from backend.app.services.store_service import store_service
 from backend.app.services.business_presets import get_business_preset
 
 logger = logging.getLogger("voiceledger.agent.tools")
@@ -22,7 +25,7 @@ logger = logging.getLogger("voiceledger.agent.tools")
 @traceable(name="tool_record_sale", run_type="tool")
 def record_sale_tool(
     db: Session,
-    merchant_id: int,
+    merchant_id: uuid.UUID,
     items: List[Dict[str, Any]],
     product_map: Dict[str, Any],
     customer_name: Optional[str] = None,
@@ -30,7 +33,7 @@ def record_sale_tool(
     raw_voice_transcript: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Creates a formal sale in the merchant ledger, updates stock/catalog pricing,
+    Creates a formal sale in the canonical merchant ledger, updates stock/catalog pricing,
     and automatically generates a Razorpay payment link/QR if not a credit order.
     """
     sale_items_create = []
@@ -53,25 +56,24 @@ def record_sale_tool(
         # Auto-register product in merchant catalog if new
         try:
             clean_name = p_name.lower()
-            existing_p = db.query(Product).filter(
-                Product.merchant_id == merchant_id,
-                Product.name == clean_name
-            ).first()
+            existing_p = (
+                db.query(Product)
+                .filter(Product.merchant_id == merchant_id, Product.name == clean_name)
+                .first()
+            )
             if not existing_p:
-                new_p = Product(
-                    merchant_id=merchant_id,
-                    name=clean_name,
-                    price=float(unit_price),
-                    category=it.get("category") or "General",
-                    unit=it.get("unit") or "item",
-                    is_active=True,
+                new_p = store_service.create_product(
+                    db,
+                    merchant_id,
+                    ProductCreate(
+                        name=clean_name,
+                        price=float(unit_price),
+                        category=it.get("category") or "General",
+                        unit=it.get("unit") or "item",
+                    ),
                 )
-                db.add(new_p)
-                db.commit()
-                # Update local map
-                product_map[clean_name] = {"id": new_p.id, "price": float(unit_price)}
+                product_map[clean_name] = {"id": str(new_p.id), "price": float(unit_price)}
         except Exception as exc:
-            db.rollback()
             logger.debug("Auto catalog add notice: %s", exc)
 
         sale_items_create.append(
@@ -89,8 +91,8 @@ def record_sale_tool(
         auto_create_payment_link=not is_credit,
     )
 
-    sale = sales_service.create_sale(db, sale_in, merchant_id=merchant_id)
-    
+    sale = store_service.create_sale(db, merchant_id=merchant_id, sale_in=sale_in)
+
     item_names = [f"{it.quantity}x {it.product_name}" for it in sale.items]
     items_str = ", ".join(item_names)
     cust_str = f" for {sale.customer_name}" if sale.customer_name else ""
@@ -99,7 +101,11 @@ def record_sale_tool(
         agent_reply = f"{items_str}{cust_str} ka Rs. {sale.total_amount:.2f} ka udhaar record ho gaya hai."
         action_taken = "CREDIT_RECORDED"
     else:
-        rzp_note = " Razorpay QR code aur payment link generate ho gaya hai." if sale.razorpay_payment_link_url else ""
+        rzp_note = (
+            " Razorpay QR code aur payment link generate ho gaya hai."
+            if sale.razorpay_payment_link_url
+            else ""
+        )
         agent_reply = f"{items_str}{cust_str} ka Rs. {sale.total_amount:.2f} ka sale record ho gaya hai.{rzp_note}"
         action_taken = "SALE_CREATED"
 
@@ -122,7 +128,7 @@ def record_sale_tool(
 @traceable(name="tool_check_payment_status", run_type="tool")
 def check_payment_status_tool(
     db: Session,
-    merchant_id: int,
+    merchant_id: uuid.UUID,
     product_filter: Optional[str] = None,
     customer_name: Optional[str] = None,
 ) -> Dict[str, Any]:
@@ -191,13 +197,13 @@ def check_payment_status_tool(
 @traceable(name="tool_add_to_catalog", run_type="tool")
 def add_to_catalog_tool(
     db: Session,
-    merchant_id: int,
+    merchant_id: uuid.UUID,
     product_name: str,
     unit_price: float,
     category: Optional[str] = None,
     unit: Optional[str] = None,
     extracted_attrs: Optional[Dict[str, Any]] = None,
-    business_type: str = "General Retail",
+    business_type: str = "Kirana & Retail",
 ) -> Dict[str, Any]:
     """
     Adds or updates a product in the merchant store catalog with dynamic business attributes.
@@ -209,67 +215,35 @@ def add_to_catalog_tool(
             "agent_reply": f"{prod_name.title()} ke liye price bolein (jaise: '{prod_name} 50 rupaye').",
         }
 
-    existing = db.query(Product).filter(
-        Product.merchant_id == merchant_id,
-        Product.name.ilike(prod_name)
-    ).first()
+    preset = get_business_preset(business_type)
+    cat = category or preset.get("category", "General")
+    prod_unit = unit or preset.get("unit", "piece")
 
-    if existing:
-        existing.price = unit_price
-        existing.is_active = True
-        if extracted_attrs:
-            current_attrs = {}
-            if isinstance(existing.attributes, str):
-                try:
-                    current_attrs = json.loads(existing.attributes)
-                except Exception:
-                    current_attrs = {}
-            elif isinstance(existing.attributes, dict):
-                current_attrs = dict(existing.attributes)
-            current_attrs.update(extracted_attrs)
-            existing.attributes = json.dumps(current_attrs)
-        db.commit()
-        db.refresh(existing)
-        return {
-            "action_taken": "CATALOG_UPDATED",
-            "agent_reply": f"{existing.name.title()} ka price update ho gaya: Rs. {existing.price:.2f}.",
-            "product_id": existing.id,
-            "name": existing.name,
-            "price": existing.price,
-        }
-    else:
-        preset = get_business_preset(business_type)
-        cat = category or preset.get("category", "General")
-        prod_unit = unit or preset.get("unit", "piece")
-        merged_attrs = dict(preset.get("default_attributes", {}))
-        if extracted_attrs:
-            merged_attrs.update(extracted_attrs)
-
-        new_prod = Product(
-            merchant_id=merchant_id,
+    product = store_service.create_product(
+        db,
+        merchant_id,
+        ProductCreate(
             name=prod_name,
             price=unit_price,
             category=cat,
             unit=prod_unit,
-            attributes=json.dumps(merged_attrs),
-            is_active=True,
-        )
-        db.add(new_prod)
-        db.commit()
-        db.refresh(new_prod)
-        return {
-            "action_taken": "CATALOG_ITEM_ADDED",
-            "agent_reply": f"Menu me {new_prod.name.title()} add ho gaya: Rs. {new_prod.price:.2f} per {new_prod.unit}.",
-            "product_id": new_prod.id,
-            "name": new_prod.name,
-            "price": new_prod.price,
-        }
+            attributes=extracted_attrs or {},
+        ),
+    )
+
+    return {
+        "action_taken": "CATALOG_ITEM_ADDED",
+        "agent_reply": f"Menu me {product.name.title()} add ho gaya: Rs. {product.price:.2f} per {product.unit}.",
+        "product_id": str(product.id),
+        "name": product.name,
+        "price": product.price,
+    }
 
 
 @traceable(name="tool_query_store_finances", run_type="tool")
 def query_store_finances_tool(
     db: Session,
-    merchant_id: int,
+    merchant_id: uuid.UUID,
     intent: str,
 ) -> Dict[str, Any]:
     """
@@ -280,7 +254,7 @@ def query_store_finances_tool(
     today_utc = datetime.now(timezone.utc).date()
     today_sales_list = [
         s for s in sales
-        if s.created_at and (s.created_at.date() == today_utc if hasattr(s.created_at, "date") else str(s.created_at)[:10] == str(today_utc))
+        if s.created_at and s.created_at.date() == today_utc
     ]
     today_gmv = sum(s.total_amount for s in today_sales_list)
     today_collected = sum(s.received_amount for s in today_sales_list)
@@ -306,14 +280,18 @@ def query_store_finances_tool(
 @traceable(name="tool_list_or_search_catalog", run_type="tool")
 def list_or_search_catalog_tool(
     db: Session,
-    merchant_id: int,
+    merchant_id: uuid.UUID,
     intent: str,
     search_query: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Explores the merchant's catalog or searches for specific item prices and details.
     """
-    products = db.query(Product).filter(Product.merchant_id == merchant_id, Product.is_active == True).all()
+    products = (
+        db.query(Product)
+        .filter(Product.merchant_id == merchant_id, Product.is_active == True)
+        .all()
+    )
     if not products:
         return {
             "action_taken": "CATALOG_LISTED" if intent == "list_catalog" else "CATALOG_SEARCHED",
@@ -341,7 +319,7 @@ def list_or_search_catalog_tool(
             return {
                 "action_taken": "CATALOG_SEARCHED",
                 "agent_reply": agent_reply,
-                "product_id": p.id,
+                "product_id": str(p.id),
                 "name": p.name,
                 "price": p.price,
                 "unit": p.unit,

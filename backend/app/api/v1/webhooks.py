@@ -9,12 +9,14 @@ Strict Financial Boundary:
 - Strictly does NOT create VoiceNotification or OutboxEvent records.
 - Event processing, state transitions, and outbox emission belong to Phase 4.
 """
+import json
 from fastapi import APIRouter, Request, Header, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 
 from backend.app.core.logging import logger
 from backend.app.db.session import get_db
 from backend.app.services.webhook_ingestion_service import webhook_ingestion_service
+from backend.app.services.payment_event_service import payment_event_service
 from backend.app.providers.exceptions import (
     ProviderAuthenticationError,
     ProviderValidationError,
@@ -97,6 +99,36 @@ async def handle_razorpay_webhook_v1(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error processing webhook",
         ) from exc
+
+    # 5. Wire PaymentEventService into the successful webhook processing path
+    if not is_duplicate and event.merchant_id is not None:
+        payload_dict = None
+        try:
+            payload_dict = json.loads(raw_body.decode("utf-8"))
+        except Exception:
+            pass
+
+        try:
+            result = payment_event_service.process_payment_event(
+                db=db,
+                event_id=event.id,
+                raw_event_payload=payload_dict,
+                auto_commit=True,
+                raise_on_error=False,
+            )
+            if result.payment:
+                payment_notes = (
+                    (payload_dict or {})
+                    .get("payload", {})
+                    .get("payment", {})
+                    .get("entity", {})
+                    .get("notes", {})
+                )
+                sale_id = payment_notes.get("sale_id") if isinstance(payment_notes, dict) else None
+                from backend.app.services.store_service import store_service
+                store_service.sync_payment_to_sale(db, result.payment, sale_id=sale_id)
+        except Exception as proc_exc:
+            logger.error("Unhandled error during payment event processing for %s: %s", event.id, proc_exc)
 
     return {
         "status": "accepted",

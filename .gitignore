@@ -39,3 +39,6 @@ bin/
 .pytest_cache/
 .agents/
 .venv/
+
+
+.env.worker

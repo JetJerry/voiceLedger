@@ -1,17 +1,20 @@
 """
 LangGraph Agent Nodes — Modular Agent Execution Pipeline with LangSmith Tracing.
+Strictly isolated by merchant_id for multi-tenant safety.
 """
-
 import json
 import logging
+import uuid
 from typing import Dict, Any, Optional, List
 from sqlalchemy.orm import Session
 from langsmith import traceable
 
 from backend.app.agentic.state import VoiceLedgerState
-from backend.app.models.legacy import LegacyMerchant as Merchant, Product, MerchantProfile
+from backend.app.models.merchant import Merchant
+from backend.app.models.product import Product
+from backend.app.models.merchant_profile import MerchantProfile
 from backend.app.services.llm_service import llm_service
-from backend.app.services.sales_service import sales_service
+from backend.app.services.store_service import store_service
 from backend.app.services.tts_service import tts_service
 from backend.app.schemas.voice import VoiceExtractionResult
 from backend.app.agentic.tools import (
@@ -33,36 +36,56 @@ def enrich_context_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
     Enriches agent state with live store catalog, product pricing, and business presets from the database.
     """
     merchant = None
-    if state.get("merchant_id"):
-        merchant = db.query(Merchant).filter(Merchant.id == state["merchant_id"]).first()
-    if not merchant:
-        merchant = sales_service.get_or_create_merchant(db)
+    raw_m_id = state.get("merchant_id")
+    if raw_m_id:
+        target_uuid = raw_m_id if isinstance(raw_m_id, uuid.UUID) else None
+        if target_uuid is None:
+            try:
+                target_uuid = uuid.UUID(str(raw_m_id))
+            except Exception:
+                pass
+        if target_uuid:
+            merchant = db.query(Merchant).filter(Merchant.id == target_uuid).first()
 
-    products = db.query(Product).filter(
-        Product.merchant_id == merchant.id,
-        Product.is_active == True
-    ).all()
-    
+    if not merchant:
+        merchant = db.query(Merchant).filter(Merchant.status == "ACTIVE").first()
+
+    if not merchant:
+        return {
+            "merchant_id": None,
+            "catalog_items": [],
+            "product_map": {},
+            "business_type": "General Retail",
+            "merchant_profile": None,
+        }
+
+    products = (
+        db.query(Product)
+        .filter(Product.merchant_id == merchant.id, Product.is_active == True)
+        .all()
+    )
+
     catalog_names = [p.name for p in products]
     product_map = {
         p.name.lower(): {
-            "id": p.id,
+            "id": str(p.id),
             "price": p.price,
             "category": p.category,
-            "unit": p.unit
+            "unit": p.unit,
         }
         for p in products
     }
 
-    profile_obj = db.query(MerchantProfile).filter(MerchantProfile.merchant_id == merchant.id).first()
-    merchant_profile = None
-    if profile_obj and profile_obj.config_json:
-        try:
-            merchant_profile = json.loads(profile_obj.config_json)
-        except Exception:
-            merchant_profile = None
-
-    business_type = merchant.business_type or (merchant_profile or {}).get("business_type", "General Retail")
+    profile_obj = (
+        db.query(MerchantProfile)
+        .filter(MerchantProfile.merchant_id == merchant.id)
+        .first()
+    )
+    merchant_profile = profile_obj.config_json if profile_obj else None
+    business_type = (
+        merchant.business_type
+        or (merchant_profile or {}).get("business_type", "Kirana & Retail")
+    )
 
     return {
         "merchant_id": merchant.id,
@@ -85,7 +108,6 @@ def extract_intent_node(state: VoiceLedgerState) -> Dict[str, Any]:
     merchant_profile = state.get("merchant_profile")
     business_type = state.get("business_type", "")
     context = state.get("context", "terminal")
-
     history = state.get("history", [])
 
     extraction: VoiceExtractionResult = llm_service.extract_transaction(
@@ -133,8 +155,8 @@ def guardrails_validator_node(state: VoiceLedgerState) -> Dict[str, Any]:
                 "validation_error": "SALE_ITEMS_MISSING",
                 "action_taken": "SALE_VALIDATION_FAILED",
                 "agent_reply": (
-                    state.get("explanation") or
-                    "Order record karne ke liye item ka naam aur price bolein (jaise: '2 coffee 60 rs')."
+                    state.get("explanation")
+                    or "Order record karne ke liye item ka naam aur price bolein (jaise: '2 coffee 60 rs')."
                 ),
             }
 
@@ -153,13 +175,20 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
     Executes grounded agent tools based on validated AI intent.
     """
     intent = state.get("intent", "general_qa")
-    merchant_id = state.get("merchant_id", 1)
-    business_type = state.get("business_type", "General Retail")
+    merchant_id = state.get("merchant_id")
+    business_type = state.get("business_type", "Kirana & Retail")
     product_map = state.get("product_map", {})
     items = state.get("items", [])
     raw_text = state.get("raw_text", "")
     customer_name = state.get("customer_name")
     is_credit = state.get("is_credit", False)
+
+    if not merchant_id:
+        return {
+            "agent_reply": "Merchant context missing. Please ensure your store session is active.",
+            "action_taken": "ERROR_NO_MERCHANT",
+            "tool_result": {},
+        }
 
     # 1. Record Sale Tool
     if intent == "record_sale":
@@ -196,13 +225,16 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
     # 3. Add to Catalog Tool
     elif intent == "add_to_catalog":
         if not items:
-            explanation = state.get("explanation") or "Product add karne ke liye product ka naam aur price bolein (jaise: 'Burger 100 rupaye' ya '2 coffee 50 rs')."
+            explanation = (
+                state.get("explanation")
+                or "Product add karne ke liye product ka naam aur price bolein (jaise: 'Burger 100 rupaye')."
+            )
             return {
                 "agent_reply": explanation,
                 "action_taken": "CATALOG_ADD_PRICE_REQUIRED",
                 "tool_result": {},
             }
-        
+
         added_items = []
         for it in items:
             prod_name = it.get("product_name", "").strip()
@@ -232,7 +264,10 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
                 "tool_result": added_items[0],
             }
         elif len(added_items) > 1:
-            names = ", ".join(f"{it.get('name', 'item').title()} (₹{it.get('price', 0):.0f})" for it in added_items)
+            names = ", ".join(
+                f"{it.get('name', 'item').title()} (Rs. {it.get('price', 0):.0f})"
+                for it in added_items
+            )
             return {
                 "agent_reply": f"Catalog me {len(added_items)} items add ho gaye: {names}.",
                 "action_taken": "CATALOG_ITEMS_ADDED",
@@ -260,7 +295,9 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
 
     # 5. List / Search Catalog Tool
     elif intent in ["list_catalog", "search_catalog"]:
-        search_query = state.get("product_name") or (items[0].get("product_name") if items else None)
+        search_query = state.get("product_name") or (
+            items[0].get("product_name") if items else None
+        )
         res = list_or_search_catalog_tool(
             db=db,
             merchant_id=merchant_id,
@@ -275,7 +312,10 @@ def execute_tool_node(state: VoiceLedgerState, db: Session) -> Dict[str, Any]:
 
     # 6. General Conversational QA
     else:
-        agent_reply = state.get("explanation") or "Namaste! Main VoiceLedger AI Assistant hoon. Aap bolkar sale record karwa sakte hain, payment verify kar sakte hain, ya menu me product add kar sakte hain."
+        agent_reply = (
+            state.get("explanation")
+            or "Namaste! Main VoiceLedger AI Assistant hoon. Aap bolkar sale record karwa sakte hain, payment verify kar sakte hain, ya menu me product add kar sakte hain."
+        )
         return {
             "agent_reply": agent_reply,
             "action_taken": "QUERY_ANSWERED",
@@ -292,7 +332,7 @@ def generate_response_node(state: VoiceLedgerState) -> Dict[str, Any]:
     """
     reply = state.get("agent_reply") or "Command process ho gaya."
     voice_lang = state.get("voice_lang", "hi")
-    
+
     refined_reply = llm_service.refine_for_speech(reply, voice_lang)
     return {
         "agent_reply": refined_reply,

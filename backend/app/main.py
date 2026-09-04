@@ -16,6 +16,9 @@ from backend.app.api.v1.merchants import router as merchants_v1_router
 from backend.app.api.v1.webhooks import router as webhooks_v1_router
 from backend.app.api.v1.devices import router as devices_v1_router
 from backend.app.api.v1.websocket import router as ws_v1_router
+from backend.app.api.v1.store import router as store_v1_router
+from backend.app.api.v1.payments import router as payments_v1_router
+from backend.app.api.v1.voice import router as voice_v1_router
 
 
 @asynccontextmanager
@@ -127,18 +130,22 @@ app.include_router(auth_v1_router, prefix="/api/v1")
 app.include_router(merchants_v1_router, prefix="/api/v1")
 app.include_router(webhooks_v1_router, prefix="/api/v1")
 app.include_router(devices_v1_router, prefix="/api/v1")
+app.include_router(store_v1_router, prefix="/api/v1")
+app.include_router(payments_v1_router, prefix="/api/v1")
+app.include_router(voice_v1_router, prefix="/api/v1")
 app.include_router(ws_v1_router)
 
-
-
 # Frontend Static Files Mount (for local monolithic runs if built)
-frontend_dir = Path(__file__).resolve().parent.parent.parent / "frontend"
-dist_dir = frontend_dir / "dist"
+repo_root = Path(__file__).resolve().parent.parent.parent
+v2_dist = repo_root / "frontend_v2" / "dist"
+legacy_dist = repo_root / "frontend" / "dist"
+dist_dir = v2_dist if v2_dist.exists() else legacy_dist
 
 if dist_dir.exists() and (dist_dir / "index.html").exists():
-    app.mount("/_expo", StaticFiles(directory=str(dist_dir / "_expo")), name="expo-static")
     if (dist_dir / "assets").exists():
         app.mount("/assets", StaticFiles(directory=str(dist_dir / "assets")), name="assets-static")
+    if (dist_dir / "_expo").exists():
+        app.mount("/_expo", StaticFiles(directory=str(dist_dir / "_expo")), name="expo-static")
 
     @app.get("/", include_in_schema=False)
     async def serve_index():

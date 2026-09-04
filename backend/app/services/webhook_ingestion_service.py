@@ -58,11 +58,18 @@ class WebhookIngestionService:
         # 1. Resolve via ProviderConnection account reference
         account_id = raw_payload.get("account_id")
         if account_id and isinstance(account_id, str):
+            clean_acc = account_id.strip()
+            possible_refs = [clean_acc]
+            if clean_acc.startswith("acc_"):
+                possible_refs.append(clean_acc[4:])
+            else:
+                possible_refs.append(f"acc_{clean_acc}")
+
             conn = (
                 db.query(ProviderConnection)
                 .filter(
                     ProviderConnection.provider == self.PROVIDER_NAME,
-                    ProviderConnection.provider_account_reference == account_id.strip(),
+                    ProviderConnection.provider_account_reference.in_(possible_refs),
                     ProviderConnection.status == "ACTIVE",
                 )
                 .first()

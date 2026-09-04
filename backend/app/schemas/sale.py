@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 import json
 from typing import List, Optional, Dict, Any
@@ -8,6 +9,7 @@ class SaleItemBase(BaseModel):
     product_name: str
     quantity: int = 1
     unit_price: Optional[float] = None
+    product_id: Optional[uuid.UUID] = None
 
 
 class SaleItemCreate(SaleItemBase):
@@ -15,8 +17,8 @@ class SaleItemCreate(SaleItemBase):
 
 
 class SaleItemResponse(BaseModel):
-    id: int
-    product_id: Optional[int] = None
+    id: uuid.UUID
+    product_id: Optional[uuid.UUID] = None
     product_name: str
     quantity: int
     unit_price: float
@@ -33,35 +35,36 @@ class SaleCreate(BaseModel):
     auto_create_payment_link: bool = True
 
 
-from backend.app.schemas.payment import PaymentResponse
-
-
 class SaleResponse(BaseModel):
     id: str
-    merchant_id: int
-    customer_id: Optional[int] = None
+    merchant_id: uuid.UUID
     customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
     total_amount: float
     received_amount: float
     outstanding_amount: float
     status: str
+    payment_id: Optional[uuid.UUID] = None
+    razorpay_order_id: Optional[str] = None
     razorpay_payment_link_id: Optional[str] = None
     razorpay_payment_link_url: Optional[str] = None
     raw_voice_transcript: Optional[str] = None
     created_at: datetime
+    updated_at: Optional[datetime] = None
     items: List[SaleItemResponse] = []
-    payments: List[PaymentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ProductBase(BaseModel):
-    name: str = Field(..., description="Item name — any product, any category (e.g. chai, notebook, hammer, shirt, apple, paracetamol)")
+    name: str = Field(..., description="Item name (e.g. chai, notebook, hammer, shirt, apple, paracetamol)")
     price: float = Field(default=0.0, description="Price per unit in INR")
-    category: Optional[str] = Field(default="General", description="Free-form category (e.g. Fruits, Pharmacy, Kirana, Bakery, Cafe, Hardware)")
-    description: Optional[str] = Field(default=None, description="Optional item description")
-    unit: Optional[str] = Field(default=None, description="Unit of measure (e.g. kg, piece, plate, glass, packet, strip, box)")
-    attributes: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Dynamic key-value attributes for any business domain")
+    category: Optional[str] = Field(default="General", description="Product category")
+    description: Optional[str] = Field(default=None, description="Item description")
+    unit: Optional[str] = Field(default="piece", description="Unit of measure (e.g. kg, piece, packet, litre, box)")
+    stock_quantity: int = Field(default=0, description="Current available inventory")
+    track_inventory: bool = Field(default=False, description="Whether to track stock levels")
+    attributes: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Dynamic key-value attributes")
 
     @field_validator("attributes", mode="before")
     @classmethod
@@ -84,6 +87,8 @@ class ProductUpdate(BaseModel):
     category: Optional[str] = None
     description: Optional[str] = None
     unit: Optional[str] = None
+    stock_quantity: Optional[int] = None
+    track_inventory: Optional[bool] = None
     attributes: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
@@ -98,11 +103,35 @@ class ProductUpdate(BaseModel):
         return v
 
 
-class ProductResponse(ProductBase):
-    id: int
-    merchant_id: int
+class ProductResponse(BaseModel):
+    id: uuid.UUID
+    merchant_id: uuid.UUID
+    name: str
+    price: float
+    price_minor: int
+    category: str
+    description: Optional[str] = None
+    unit: Optional[str] = "piece"
+    stock_quantity: int = 0
+    track_inventory: bool = False
+    attributes: Dict[str, Any] = Field(default_factory=dict)
     is_active: bool = True
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryAdjustRequest(BaseModel):
+    product_id: uuid.UUID
+    delta: int = Field(..., description="Quantity to add (positive) or remove (negative)")
+    reason: Optional[str] = Field(default="manual_adjustment", description="Reason for adjustment")
+
+
+class InventoryAdjustResponse(BaseModel):
+    product_id: uuid.UUID
+    product_name: str
+    previous_quantity: int
+    new_quantity: int
+    delta: int
+    reason: str
