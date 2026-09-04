@@ -285,8 +285,3 @@ VITE_WS_BASE_URL=wss://rishil-cloud-mail--voiceledger-backend-fastapi-app.modal.
 4. **Argon2id Password Standards**: Adheres to OWASP password hashing guidelines with high memory and iteration costs.
 
 ---
-
-## 👥 Authors & License
-
-Developed with ❤️ for the **Razorpay Buildathon 2026**.  
-Licensed under the **MIT License**.
